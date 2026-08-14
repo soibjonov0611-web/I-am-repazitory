@@ -17,6 +17,7 @@ dist-ssr
 # Environment variables & Credentials
 .env
 .env.*
+!.env.example
 *.pem
 
 # Editor & OS files

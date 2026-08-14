@@ -102,6 +102,9 @@ export const translations = {
       messageLabel: 'Xabaringiz',
       messagePlaceholder: 'Loyiha haqida batafsil yozing…',
       sendBtn: 'Xabarni yuborish',
+      sending: 'Yuborilmoqda...',
+      successMsg: 'Xabaringiz muvaffaqiyatli yuborildi!',
+      errorMsg: 'Xabar yuborilmadi. Iltimos, qayta urinib ko‘ring.',
     },
     footer: {
       rights: 'Barcha huquqlar himoyalangan.',
@@ -212,6 +215,9 @@ export const translations = {
       messageLabel: 'Сообщение',
       messagePlaceholder: 'Расскажите подробнее о вашем проекте…',
       sendBtn: 'Отправить сообщение',
+      sending: 'Отправка...',
+      successMsg: 'Ваше сообщение успешно отправлено!',
+      errorMsg: 'Не удалось отправить сообщение. Попробуйте еще раз.',
     },
     footer: {
       rights: 'Все права защищены.',
@@ -322,6 +328,9 @@ export const translations = {
       messageLabel: 'Message',
       messagePlaceholder: 'Tell me about your project…',
       sendBtn: 'Send Message',
+      sending: 'Sending...',
+      successMsg: 'Your message has been sent successfully!',
+      errorMsg: 'Message could not be sent. Please try again.',
     },
     footer: {
       rights: 'All rights reserved.',
