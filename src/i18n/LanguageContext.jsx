@@ -59,3 +59,4 @@ export function LanguageProvider({ children }) {
     </LanguageContext.Provider>
   );
 }
+

@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const profile = {
-  name: 'Saipov_00',
-  firstName: 'Saipov_00',
+  name: 'Soibjonov Abduraxmon',
+  firstName: 'Soibjonov',
   role: 'Frontend Developer',
   availability: 'Open for opportunities',
   email: 'soibjonov.0611@gmail.com',
