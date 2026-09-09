@@ -1,27 +1,27 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { contactChannels } from '../data/portfolio';
+import { Send, CheckCircle, AlertCircle, Loader2, Copy, Check } from 'lucide-react';
+import { contactChannels, profile } from '../data/portfolio';
 import { useLanguage } from '../i18n/useLanguage';
 import { getIcon } from '../lib/icons';
+import { TelegramIcon } from '../lib/brandIcons';
 import { fadeUp, staggerContainer, viewportOnce } from '../lib/motion';
 
 const initialForm = { name: '', email: '', message: '' };
 
-// Basic client-side email format check
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidEmail = (email) => /^[^s@]+@[^s@]+.[^s@]+$/.test(email);
 
 export default function Contact() {
   const { t } = useLanguage();
-  const [form, setForm]     = useState(initialForm);
-  const [honeypot, setHoneypot] = useState(''); // spam trap — must stay empty
+  const [form, setForm] = useState(initialForm);
+  const [honeypot, setHoneypot] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle' | 'sending' | 'success' | 'error'
   const [clientError, setClientError] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  // ─── Client-side validation ───────────────────────────────────────────────
   function validate() {
     if (!form.name.trim() || form.name.trim().length > 100) {
-      return t('contact.nameLabel') + ' is required (max 100 chars).';
+      return (t('contact.nameLabel') || 'Name') + ' is required (max 100 chars).';
     }
     if (!form.email.trim() || !isValidEmail(form.email.trim())) {
       return 'Please enter a valid email address.';
@@ -35,7 +35,17 @@ export default function Contact() {
     return null;
   }
 
-  // ─── Submit handler ───────────────────────────────────────────────────────
+  const handleCopyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(profile.email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback
+      setCopied(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setClientError('');
@@ -53,14 +63,14 @@ export default function Contact() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name:    form.name.trim(),
-          email:   form.email.trim(),
+          name: form.name.trim(),
+          email: form.email.trim(),
           message: form.message.trim(),
-          website: honeypot, // honeypot field
+          website: honeypot,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.success) {
         setStatus('error');
@@ -69,11 +79,9 @@ export default function Contact() {
 
       setStatus('success');
       setForm(initialForm);
-
-      // Reset to idle after 6 seconds
       setTimeout(() => setStatus('idle'), 6000);
-
     } catch {
+      // Honest failure handling: show error and offer direct channels
       setStatus('error');
     }
   };
@@ -90,15 +98,16 @@ export default function Contact() {
           viewport={viewportOnce}
           variants={fadeUp()}
         >
-          <motion.div variants={fadeUp(1)}>
+          <motion.div variants={fadeUp(1)} className="contact-heading-wrap">
             <span className="eyebrow">{t('contact.eyebrow')}</span>
             <h2>
               {t('contact.titleStart')}{' '}
               <span className="gradient-text">{t('contact.titleEnd')}</span>
             </h2>
-            <p>{t('contact.subtext')}</p>
+            <p className="contact-subtext">{t('contact.subtext')}</p>
           </motion.div>
 
+          {/* Quick Contact Chips & Copy Email */}
           <motion.div
             className="contact-channels"
             variants={staggerContainer(0.07)}
@@ -112,7 +121,7 @@ export default function Contact() {
 
               return (
                 <motion.a
-                  className="contact-chip"
+                  className={`contact-chip ${channel.primary ? 'contact-chip-primary' : ''}`}
                   key={channel.name}
                   href={channel.url}
                   target={isMail ? undefined : '_blank'}
@@ -121,20 +130,33 @@ export default function Contact() {
                   variants={fadeUp()}
                 >
                   <Icon size={17} />
-                  <span>{channel.name}</span>
-                  <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>{channel.handle}</span>
+                  <span className="channel-name">{channel.name}</span>
+                  <span className="channel-handle">{channel.handle}</span>
                 </motion.a>
               );
             })}
+
+            {/* Quick Copy Email Button */}
+            <motion.button
+              type="button"
+              className="contact-chip contact-copy-btn"
+              onClick={handleCopyEmail}
+              aria-label={t('contact.copyEmail')}
+              variants={fadeUp()}
+            >
+              {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
+              <span>{copied ? t('contact.copied') : t('contact.copyEmail')}</span>
+            </motion.button>
           </motion.div>
 
+          {/* Contact Form */}
           <motion.form
             className="contact-form"
             onSubmit={handleSubmit}
             variants={fadeUp(2)}
             noValidate
           >
-            {/* ── Honeypot (hidden from real users, bots fill it) ── */}
+            {/* Honeypot field (hidden from real users, bots fill it) */}
             <input
               type="text"
               name="website"
@@ -196,7 +218,7 @@ export default function Contact() {
               />
             </div>
 
-            {/* ── Client-side validation error ── */}
+            {/* Client-side validation feedback */}
             {clientError && (
               <p className="contact-form-feedback contact-form-feedback--error" role="alert">
                 <AlertCircle size={15} />
@@ -204,26 +226,46 @@ export default function Contact() {
               </p>
             )}
 
-            {/* ── Submit button ── */}
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSending}
-              aria-busy={isSending}
-            >
-              {isSending ? (
-                <>
-                  <Loader2 size={16} className="spin" />
-                  {t('contact.sending')}
-                </>
-              ) : (
-                <>
-                  {t('contact.sendBtn')} <Send size={16} />
-                </>
-              )}
-            </button>
+            {/* Submit button */}
+            <div className="contact-actions-row">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSending}
+                aria-busy={isSending}
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 size={16} className="spin" />
+                    {t('contact.sending')}
+                  </>
+                ) : (
+                  <>
+                    {t('contact.sendBtn')} <Send size={16} />
+                  </>
+                )}
+              </button>
 
-            {/* ── Status feedback messages ── */}
+              <div className="contact-direct-links">
+                <span className="direct-links-label">{t('contact.orDirectly')}</span>
+                <a
+                  href={profile.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="direct-link-tag telegram"
+                >
+                  <TelegramIcon size={14} /> Telegram
+                </a>
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="direct-link-tag mail"
+                >
+                  Email
+                </a>
+              </div>
+            </div>
+
+            {/* Feedback messages */}
             <AnimatePresence>
               {status === 'success' && (
                 <motion.p
@@ -233,22 +275,40 @@ export default function Contact() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                 >
-                  <CheckCircle size={15} />
+                  <CheckCircle size={16} />
                   {t('contact.successMsg')}
                 </motion.p>
               )}
 
               {status === 'error' && (
-                <motion.p
-                  className="contact-form-feedback contact-form-feedback--error"
+                <motion.div
+                  className="contact-form-feedback contact-form-feedback--error contact-error-box"
                   role="alert"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                 >
-                  <AlertCircle size={15} />
-                  {t('contact.errorMsg')}
-                </motion.p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertCircle size={16} />
+                    <span>{t('contact.errorMsg')}</span>
+                  </div>
+                  <div className="contact-fallback-actions">
+                    <a
+                      href={profile.telegram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost btn-sm"
+                    >
+                      <TelegramIcon size={14} /> {t('contact.chatTelegram')}
+                    </a>
+                    <a
+                      href={`mailto:${profile.email}?subject=Portfolio%20Inquiry&body=Hello%20${encodeURIComponent(profile.name)},`}
+                      className="btn btn-ghost btn-sm"
+                    >
+                      {t('contact.chatGmail')}
+                    </a>
+                  </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </motion.form>

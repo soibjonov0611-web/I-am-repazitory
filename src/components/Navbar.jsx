@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
 import { profile, navLinks } from '../data/portfolio';
 import { useLanguage } from '../i18n/useLanguage';
+import { useTheme } from '../context/useTheme';
 import { EASE } from '../lib/motion';
 
 const languages = [
@@ -18,6 +19,7 @@ function scrollToSection(id) {
 
 export default function Navbar() {
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState('');
   const [open, setOpen] = useState(false);
@@ -32,7 +34,7 @@ export default function Navbar() {
       const ids = navLinks.map((l) => l.href.slice(1));
       for (const id of ids) {
         const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= 140) current = id;
+        if (el && el.getBoundingClientRect().top <= 160) current = id;
       }
       setActive(current);
     };
@@ -76,12 +78,15 @@ export default function Navbar() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-          <span className="logo-mark">S</span>
-          {profile.name}
+          <span className="logo-mark">&lt;/&gt;</span>
+          <span className="logo-text">
+            {profile.firstName}
+            <span className="logo-dot">.dev</span>
+          </span>
         </a>
 
         <div className="nav-right-actions">
-          <nav aria-label="Main navigation">
+          <nav aria-label="Main navigation" className="desktop-nav">
             <ul className="nav-links">
               {navLinks.map((link) => (
                 <li key={link.href}>
@@ -100,6 +105,25 @@ export default function Navbar() {
             </ul>
           </nav>
 
+          {/* Theme Toggle Button */}
+          <button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={t('nav.toggleTheme')}
+            title={t('nav.toggleTheme')}
+          >
+            <motion.div
+              key={theme}
+              initial={{ rotate: -90, opacity: 0, scale: 0.8 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: 90, opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {isDark ? <Sun size={18} className="theme-icon sun" /> : <Moon size={18} className="theme-icon moon" />}
+            </motion.div>
+          </button>
+
           {/* Desktop Language Selector */}
           <div className="lang-selector" ref={dropdownRef}>
             <button
@@ -111,7 +135,13 @@ export default function Navbar() {
             >
               <span className="lang-flag">{activeLangObj.flag}</span>
               <span>{activeLangObj.code.toUpperCase()}</span>
-              <ChevronDown size={14} style={{ transform: langDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: langDropdown ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s',
+                }}
+              />
             </button>
 
             <AnimatePresence>
@@ -142,7 +172,7 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
 
-          {/* Hamburger button */}
+          {/* Hamburger button for Mobile */}
           <button
             type="button"
             className="nav-hamburger"
@@ -159,19 +189,20 @@ export default function Navbar() {
           {open && (
             <motion.div
               className="mobile-menu"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25, ease: EASE }}
             >
               {navLinks.map((link, i) => (
                 <motion.a
                   key={link.href}
                   href={link.href}
-                  initial={{ opacity: 0, y: 18 }}
+                  className={active === link.href.slice(1) ? 'active' : ''}
+                  initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.35, delay: 0.05 * i, ease: EASE }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.3, delay: 0.04 * i, ease: EASE }}
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav(link.href);
@@ -181,40 +212,47 @@ export default function Navbar() {
                 </motion.a>
               ))}
 
+              <div className="mobile-controls-row">
+                {/* Mobile Theme Toggle */}
+                <button
+                  type="button"
+                  className="mobile-theme-btn"
+                  onClick={toggleTheme}
+                  aria-label={t('nav.toggleTheme')}
+                >
+                  {isDark ? <Sun size={17} /> : <Moon size={17} />}
+                  <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+                </button>
+
+                {/* Mobile Language Selector */}
+                <div className="mobile-lang-group">
+                  {languages.map((l) => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      className={`mobile-lang-btn ${language === l.code ? 'active' : ''}`}
+                      onClick={() => {
+                        setLanguage(l.code);
+                        setOpen(false);
+                      }}
+                    >
+                      {l.flag} {l.code.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <motion.button
                 type="button"
-                className="btn btn-primary"
-                initial={{ opacity: 0, y: 18 }}
+                className="btn btn-primary mobile-cta-btn"
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, delay: 0.05 * navLinks.length, ease: EASE }}
+                transition={{ duration: 0.3, delay: 0.04 * (navLinks.length + 1), ease: EASE }}
                 onClick={() => handleNav('#contact')}
               >
                 {t('nav.contactBtn')}
               </motion.button>
-
-              {/* Mobile Language Selector */}
-              <motion.div
-                className="mobile-lang-group"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, delay: 0.05 * (navLinks.length + 1), ease: EASE }}
-              >
-                {languages.map((l) => (
-                  <button
-                    key={l.code}
-                    type="button"
-                    className={`mobile-lang-btn ${language === l.code ? 'active' : ''}`}
-                    onClick={() => {
-                      setLanguage(l.code);
-                      setOpen(false);
-                    }}
-                  >
-                    {l.flag} {l.code.toUpperCase()}
-                  </button>
-                ))}
-              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

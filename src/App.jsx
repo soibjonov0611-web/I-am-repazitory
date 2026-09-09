@@ -5,6 +5,7 @@ import About from './components/About';
 import Skills from './components/Skills';
 import Projects from './components/Projects';
 import Experience from './components/Experience';
+import GithubRepos from './components/GithubRepos';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import { fadeIn } from './lib/motion';
@@ -23,6 +24,7 @@ function App() {
         <Skills />
         <Projects />
         <Experience />
+        <GithubRepos />
         <Contact />
       </main>
       <Footer />
@@ -30,4 +32,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 
