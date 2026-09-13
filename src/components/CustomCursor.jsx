@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/useTheme';
 
 const NUM_PAIRS = 20; // Exactly 20 pairs = EXACTLY 40 legs (20 left, 20 right)
-const BODY_LENGTH = 33; // 1.5x larger body (was 22)
+const BODY_LENGTH = 33; // 1.5x larger body
 
 export default function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -14,17 +15,27 @@ export default function CustomCursor() {
   const canvasRef = useRef(null);
   const hoveredRef = useRef(false);
   const isDarkRef = useRef(isDark);
+  const isMobileRef = useRef(false);
 
-  // Kinematics state in refs for maximum 120 FPS performance without React re-renders
+  // Kinematics state in refs for 120 FPS performance without React re-renders
   const targetPos = useRef({ x: -100, y: -100 });
-  const insectPos = useRef({ x: -100, y: -100 });
+  const insectPos = useRef({ x: 50, y: 100 });
   const angleRef = useRef(0);
   const speedRef = useRef(0);
   const walkPhaseRef = useRef(0);
-  const contractRef = useRef(1.0); // 1.0 = normal, 0.22 = contracted on click
+  const contractRef = useRef(1.0); // 1.0 = normal, 0.22 = contracted on click/tap
   const trailRef = useRef([]); // Micro-glow trail points
-  const ripplesRef = useRef([]); // Click shockwave ripples
+  const ripplesRef = useRef([]); // Shockwave ripples
   const animFrameRef = useRef(null);
+
+  // Mobile autonomous wandering state
+  const mobilePatrolRef = useRef({
+    dir: 1, // 1 = moving right, -1 = moving left
+    state: 'walking', // 'walking' | 'pausing'
+    pauseTimer: 0,
+    baseY: 0,
+    speed: 46, // px per sec
+  });
 
   useEffect(() => {
     hoveredRef.current = hovered;
@@ -34,7 +45,11 @@ export default function CustomCursor() {
     isDarkRef.current = isDark;
   }, [isDark]);
 
-  // Check fine pointer (desktop mouse) & reduced motion preferences
+  useEffect(() => {
+    isMobileRef.current = isMobile;
+  }, [isMobile]);
+
+  // Capability detection: Desktop fine pointer vs Mobile coarse pointer
   useEffect(() => {
     const finePointerQuery = window.matchMedia('(pointer: fine)');
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -42,7 +57,28 @@ export default function CustomCursor() {
     const updateCapabilities = () => {
       const isFine = finePointerQuery.matches;
       const isReduced = reducedMotionQuery.matches;
-      setEnabled(isFine && !isReduced);
+
+      if (isReduced) {
+        setEnabled(false);
+        return;
+      }
+
+      setEnabled(true);
+      const mobile = !isFine;
+      setIsMobile(mobile);
+      isMobileRef.current = mobile;
+
+      // On mobile, insect is always visible and starts near bottom left
+      if (mobile) {
+        setVisible(true);
+        insectPos.current.x = 50;
+        const initialY = Math.max(window.innerHeight - 38, 60);
+        insectPos.current.y = initialY;
+        mobilePatrolRef.current.baseY = initialY;
+        mobilePatrolRef.current.dir = 1;
+        mobilePatrolRef.current.state = 'walking';
+        angleRef.current = 0;
+      }
     };
 
     updateCapabilities();
@@ -56,9 +92,9 @@ export default function CustomCursor() {
     };
   }, []);
 
-  // Suppress desktop native cursor while custom cursor is active
+  // Suppress desktop native cursor only on desktop fine pointer
   useEffect(() => {
-    if (enabled && visible) {
+    if (enabled && visible && !isMobile) {
       document.documentElement.classList.add('has-custom-cursor');
     } else {
       document.documentElement.classList.remove('has-custom-cursor');
@@ -67,9 +103,9 @@ export default function CustomCursor() {
     return () => {
       document.documentElement.classList.remove('has-custom-cursor');
     };
-  }, [enabled, visible]);
+  }, [enabled, visible, isMobile]);
 
-  // Canvas resize listener with High-DPI support
+  // Canvas resize with High-DPI support
   useEffect(() => {
     if (!enabled) return;
 
@@ -81,6 +117,15 @@ export default function CustomCursor() {
       canvas.height = window.innerHeight * dpr;
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
+
+      // Update mobile position bounds on screen resize or orientation change
+      if (isMobileRef.current) {
+        const paddingX = 40;
+        const newBaseY = Math.max(window.innerHeight - 38, 60);
+        mobilePatrolRef.current.baseY = newBaseY;
+        insectPos.current.y = newBaseY;
+        insectPos.current.x = Math.max(paddingX, Math.min(window.innerWidth - paddingX, insectPos.current.x));
+      }
     };
 
     handleResize();
@@ -88,11 +133,13 @@ export default function CustomCursor() {
     return () => window.removeEventListener('resize', handleResize);
   }, [enabled]);
 
-  // Mouse event listeners
+  // Desktop Mouse listeners & Mobile Touch listeners
   useEffect(() => {
     if (!enabled) return;
 
+    // Desktop mouse movement
     const onMouseMove = (e) => {
+      if (isMobileRef.current) return;
       targetPos.current.x = e.clientX;
       targetPos.current.y = e.clientY;
 
@@ -103,8 +150,9 @@ export default function CustomCursor() {
       }
     };
 
+    // Click / Tap contraction reaction
     const onMouseDown = () => {
-      // Contract all 40 legs tightly into the carapace
+      if (isMobileRef.current) return;
       contractRef.current = 0.22;
       ripplesRef.current.push({
         x: targetPos.current.x,
@@ -115,14 +163,32 @@ export default function CustomCursor() {
       });
     };
 
+    // Mobile touch interaction: tapping causes the 40 legs to flex with a shockwave
+    const onTouchStart = () => {
+      if (!isMobileRef.current) return;
+      contractRef.current = 0.22;
+      ripplesRef.current.push({
+        x: insectPos.current.x,
+        y: insectPos.current.y,
+        radius: 6,
+        maxRadius: 40,
+        alpha: 0.85,
+      });
+    };
+
     const onMouseLeave = () => {
+      if (isMobileRef.current) return;
       setVisible(false);
       trailRef.current = [];
     };
 
-    const onMouseEnter = () => setVisible(true);
+    const onMouseEnter = () => {
+      if (isMobileRef.current) return;
+      setVisible(true);
+    };
 
     const onMouseOver = (e) => {
+      if (isMobileRef.current) return;
       const target = e.target;
       if (
         target.closest('a') ||
@@ -148,6 +214,7 @@ export default function CustomCursor() {
 
     window.addEventListener('mousemove', onMouseMove, { passive: true });
     window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
     document.addEventListener('mouseover', onMouseOver, { passive: true });
     document.documentElement.addEventListener('mouseleave', onMouseLeave);
     document.documentElement.addEventListener('mouseenter', onMouseEnter);
@@ -155,13 +222,14 @@ export default function CustomCursor() {
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('touchstart', onTouchStart);
       document.removeEventListener('mouseover', onMouseOver);
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
       document.documentElement.removeEventListener('mouseenter', onMouseEnter);
     };
   }, [enabled, visible]);
 
-  // Main 120 FPS procedural animation & kinematics loop
+  // Main 120 FPS render loop for both Desktop Cursor & Mobile Walking Character
   useEffect(() => {
     if (!enabled) return;
 
@@ -186,38 +254,86 @@ export default function CustomCursor() {
         ctx.save();
         ctx.scale(dpr, dpr);
 
-        const target = targetPos.current;
         const insect = insectPos.current;
         const isDarkTheme = isDarkRef.current;
         const isHovered = hoveredRef.current;
+        const mobile = isMobileRef.current;
 
-        // Smoothly follow mouse pointer
-        const dx = target.x - insect.x;
-        const dy = target.y - insect.y;
-        const dist = Math.hypot(dx, dy);
+        let speed = 0;
 
-        // Responsive tracking speed: agile & natural
-        const followSpeed = isHovered ? 0.48 : 0.42;
-        insect.x += dx * followSpeed;
-        insect.y += dy * followSpeed;
+        if (mobile) {
+          // ── Mobile Autonomous Patrol Logic (Left <-> Right) ─────────────
+          const patrol = mobilePatrolRef.current;
+          const paddingX = 40;
+          const leftBound = paddingX;
+          const rightBound = window.innerWidth - paddingX;
 
-        speedRef.current = dist;
+          if (patrol.state === 'walking') {
+            speed = patrol.speed;
+            insect.x += patrol.dir * speed * dt;
 
-        // Smooth orientation heading towards mouse trajectory
-        if (dist > 0.8) {
-          const targetAngle = Math.atan2(dy, dx);
-          let diff = targetAngle - angleRef.current;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          angleRef.current += diff * 0.28;
+            // Target angle: 0 for walking right, Math.PI for walking left
+            const targetAngle = patrol.dir === 1 ? 0 : Math.PI;
+            let diff = targetAngle - angleRef.current;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            angleRef.current += diff * 0.18;
+
+            // Metachronal wave stepping
+            walkPhaseRef.current += dt * 13;
+
+            // Organic subtle vertical wave
+            insect.y = patrol.baseY + Math.sin(walkPhaseRef.current * 0.4) * 3;
+
+            // Check edge boundaries
+            if (patrol.dir === 1 && insect.x >= rightBound) {
+              insect.x = rightBound;
+              patrol.state = 'pausing';
+              patrol.pauseTimer = 0.65; // Pause at edge
+            } else if (patrol.dir === -1 && insect.x <= leftBound) {
+              insect.x = leftBound;
+              patrol.state = 'pausing';
+              patrol.pauseTimer = 0.65; // Pause at edge
+            }
+          } else if (patrol.state === 'pausing') {
+            speed = 2; // idle
+            walkPhaseRef.current += dt * 3; // Gentle breathing idle wave
+            patrol.pauseTimer -= dt;
+
+            if (patrol.pauseTimer <= 0) {
+              patrol.dir = -patrol.dir; // Switch direction
+              patrol.state = 'walking';
+            }
+          }
+
+          speedRef.current = speed;
+        } else {
+          // ── Desktop Mouse Follow Logic ────────────────────────────────────
+          const target = targetPos.current;
+          const dx = target.x - insect.x;
+          const dy = target.y - insect.y;
+          const dist = Math.hypot(dx, dy);
+
+          const followSpeed = isHovered ? 0.48 : 0.42;
+          insect.x += dx * followSpeed;
+          insect.y += dy * followSpeed;
+
+          speed = dist;
+          speedRef.current = speed;
+
+          if (dist > 0.8) {
+            const targetAngle = Math.atan2(dy, dx);
+            let diff = targetAngle - angleRef.current;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            angleRef.current += diff * 0.28;
+          }
+
+          const stepRate = isHovered ? Math.max(speed * 0.2, 0.08) : Math.max(speed * 0.12, 0.035);
+          walkPhaseRef.current += stepRate;
         }
 
         const angle = angleRef.current;
-        const speed = speedRef.current;
-
-        // Metachronal stepping wave phase
-        const stepRate = isHovered ? Math.max(speed * 0.2, 0.08) : Math.max(speed * 0.12, 0.035);
-        walkPhaseRef.current += stepRate;
         const walkPhase = walkPhaseRef.current;
 
         // Rebound contraction back to 1.0 (spring physics on click)
@@ -225,11 +341,11 @@ export default function CustomCursor() {
         const contract = contractRef.current;
 
         // Dynamic trail generation when moving fast
-        if (speed > 2.0) {
+        if (speed > (mobile ? 40 : 2.0)) {
           const tailDist = BODY_LENGTH * 0.95;
           const tailX = insect.x - Math.cos(angle) * tailDist;
           const tailY = insect.y - Math.sin(angle) * tailDist;
-          trailRef.current.push({ x: tailX, y: tailY, alpha: 0.5, radius: 2.0 });
+          trailRef.current.push({ x: tailX, y: tailY, alpha: 0.45, radius: 1.8 });
         }
 
         // Render micro glowing trail
@@ -267,16 +383,14 @@ export default function CustomCursor() {
         }
 
         // ── Render EXACTLY 40 Long, Elegant Cyber Legs (20 Left, 20 Right) ──
-        // Elastic trailing lag when moving fast
-        const lagAngle = -Math.min(speed * 0.045, 0.58);
-        const stretch = 1 + Math.min(speed * 0.025, 0.3);
+        const lagAngle = -Math.min(speed * (mobile ? 0.005 : 0.045), 0.58);
+        const stretch = 1 + Math.min(speed * (mobile ? 0.003 : 0.025), 0.3);
         const spreadFactor = (isHovered ? 1.32 : 1.0) * contract;
 
         ctx.lineWidth = 1.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Subtle futuristic leg glow
         ctx.shadowBlur = isDarkTheme ? (isHovered ? 10 : 5) : 4;
         ctx.shadowColor = isDarkTheme ? 'rgba(34, 211, 238, 0.5)' : 'rgba(79, 70, 229, 0.4)';
 
@@ -288,7 +402,7 @@ export default function CustomCursor() {
           const sx = insect.x - Math.cos(angle) * spineDist;
           const sy = insect.y - Math.sin(angle) * spineDist;
 
-          // Carapace width at this segment (1.5x scaled)
+          // Carapace width at this segment
           const w = (Math.sin(t * Math.PI) * 3.8 + 1.8) * (isHovered ? 1.08 : 1.0);
 
           // Perpendicular side vectors
@@ -303,14 +417,14 @@ export default function CustomCursor() {
 
           // Metachronal wave swing per leg
           const segmentPhase = walkPhase - i * 0.44;
-          const swing = Math.sin(segmentPhase) * (Math.min(speed * 0.08, 0.38) + (isHovered ? 0.35 : 0.12));
+          const swing = Math.sin(segmentPhase) * (mobile ? 0.32 : Math.min(speed * 0.08, 0.38) + (isHovered ? 0.35 : 0.12));
 
-          // Long, elegant leg length (significantly longer than before: 16px to 24px)
+          // Long, elegant leg length (16px to 24px)
           const baseLen = (Math.sin(t * Math.PI) * 7.5 + 15.5) * stretch * spreadFactor;
           const femurLen = baseLen * 0.48;
           const tibiaLen = baseLen * 0.62;
 
-          // Leg angle offsets (front legs point forward, rear legs sweep backward)
+          // Directional angle offset (front legs angle forward, rear legs sweep backward)
           const angleOffset = (t - 0.42) * 0.45;
 
           // Left Leg (1)
@@ -331,7 +445,7 @@ export default function CustomCursor() {
           const rfx = rkx + Math.cos(rightFootAngle) * tibiaLen;
           const rfy = rky + Math.sin(rightFootAngle) * tibiaLen;
 
-          // Dynamic leg coloring (cyan fading to purple towards tips)
+          // Dynamic leg coloring
           const legAlpha = 0.6 + Math.sin(t * Math.PI) * 0.35;
           ctx.strokeStyle = isDarkTheme
             ? `rgba(34, 211, 238, ${isHovered ? 0.95 : legAlpha})`
@@ -366,11 +480,10 @@ export default function CustomCursor() {
         ctx.translate(bcx, bcy);
         ctx.rotate(angle);
 
-        // Carapace glow
         ctx.shadowBlur = isDarkTheme ? (isHovered ? 14 : 8) : 6;
         ctx.shadowColor = isDarkTheme ? '#22d3ee' : '#6366f1';
 
-        // Carapace exoskeleton shell (1.5x scaled)
+        // Carapace shell
         ctx.beginPath();
         const halfLen = BODY_LENGTH * 0.48;
         const halfWidth = isHovered ? 5.2 : 4.5;
@@ -426,7 +539,7 @@ export default function CustomCursor() {
         ctx.arc(2.2, 1.8, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Dual Antennae (Long, graceful sensors)
+        // Dual Antennae (Curving forward sensors)
         ctx.strokeStyle = isDarkTheme ? 'rgba(34, 211, 238, 0.85)' : 'rgba(79, 70, 229, 0.85)';
         ctx.lineWidth = 1.0;
 
@@ -480,7 +593,7 @@ export default function CustomCursor() {
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        zIndex: 10000,
+        zIndex: 9990,
       }}
     />
   );

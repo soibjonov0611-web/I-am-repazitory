@@ -3080,7 +3080,6 @@ section {
 }
 
 @media (pointer: coarse) {
-  .cyber-insect-canvas,
   .mouse-spotlight {
     display: none !important;
   }
