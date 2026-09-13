@@ -4,6 +4,14 @@ import { useTheme } from '../context/useTheme';
 const NUM_PAIRS = 20; // Exactly 20 pairs = EXACTLY 40 legs (20 left, 20 right)
 const BODY_LENGTH = 33; // 1.5x larger body
 
+// ── Angle lerp helper (handles wraparound) ───────────────────────────────────
+function lerpAngle(current, target, t) {
+  let diff = target - current;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  while (diff >  Math.PI) diff -= Math.PI * 2;
+  return current + diff * t;
+}
+
 export default function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -28,13 +36,17 @@ export default function CustomCursor() {
   const ripplesRef = useRef([]); // Shockwave ripples
   const animFrameRef = useRef(null);
 
-  // Mobile autonomous wandering state
-  const mobilePatrolRef = useRef({
-    dir: 1, // 1 = moving right, -1 = moving left
-    state: 'walking', // 'walking' | 'pausing'
-    pauseTimer: 0,
-    baseY: 0,
-    speed: 46, // px per sec
+  // ── Mobile Full-Screen 2D Wander State ──────────────────────────────────────
+  const wanderRef = useRef({
+    heading: 0,          // Current movement heading (radians)
+    targetHeading: 0,    // Smoothly steered towards this heading
+    speed: 38,           // Current px/s
+    targetSpeed: 38,     // Speed we're lerping towards
+    waypointX: 200,      // Current target waypoint X
+    waypointY: 300,      // Current target waypoint Y
+    waypointTimer: 2.0,  // Countdown before nudging heading (seconds)
+    state: 'walking',    // 'walking' | 'pausing'
+    pauseTimer: 0,       // Pause countdown
   });
 
   useEffect(() => {
@@ -48,6 +60,17 @@ export default function CustomCursor() {
   useEffect(() => {
     isMobileRef.current = isMobile;
   }, [isMobile]);
+
+  // Helper: pick a fresh random waypoint within safe viewport bounds
+  const pickWaypoint = () => {
+    const pad = 55;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    return {
+      x: pad + Math.random() * Math.max(0, w - pad * 2),
+      y: pad + Math.random() * Math.max(0, h - pad * 2),
+    };
+  };
 
   // Capability detection: Desktop fine pointer vs Mobile coarse pointer
   useEffect(() => {
@@ -68,16 +91,29 @@ export default function CustomCursor() {
       setIsMobile(mobile);
       isMobileRef.current = mobile;
 
-      // On mobile, insect is always visible and starts near bottom left
+      // On mobile, insect starts at a random viewport position and wanders freely
       if (mobile) {
         setVisible(true);
-        insectPos.current.x = 50;
-        const initialY = Math.max(window.innerHeight - 38, 60);
-        insectPos.current.y = initialY;
-        mobilePatrolRef.current.baseY = initialY;
-        mobilePatrolRef.current.dir = 1;
-        mobilePatrolRef.current.state = 'walking';
-        angleRef.current = 0;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const startX = w * 0.2 + Math.random() * w * 0.6;
+        const startY = h * 0.2 + Math.random() * h * 0.6;
+        insectPos.current.x = startX;
+        insectPos.current.y = startY;
+
+        const wp = { x: w * 0.2 + Math.random() * w * 0.6, y: h * 0.2 + Math.random() * h * 0.6 };
+        const initHeading = Math.atan2(wp.y - startY, wp.x - startX);
+
+        wanderRef.current.heading = initHeading;
+        wanderRef.current.targetHeading = initHeading;
+        wanderRef.current.waypointX = wp.x;
+        wanderRef.current.waypointY = wp.y;
+        wanderRef.current.waypointTimer = 2.0 + Math.random() * 2.0;
+        wanderRef.current.speed = 35 + Math.random() * 20;
+        wanderRef.current.targetSpeed = wanderRef.current.speed;
+        wanderRef.current.state = 'walking';
+        wanderRef.current.pauseTimer = 0;
+        angleRef.current = initHeading;
       }
     };
 
@@ -118,13 +154,15 @@ export default function CustomCursor() {
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
 
-      // Update mobile position bounds on screen resize or orientation change
+      // Clamp insect position to new viewport bounds on resize / orientation change
       if (isMobileRef.current) {
-        const paddingX = 40;
-        const newBaseY = Math.max(window.innerHeight - 38, 60);
-        mobilePatrolRef.current.baseY = newBaseY;
-        insectPos.current.y = newBaseY;
-        insectPos.current.x = Math.max(paddingX, Math.min(window.innerWidth - paddingX, insectPos.current.x));
+        const pad = 55;
+        insectPos.current.x = Math.max(pad, Math.min(window.innerWidth  - pad, insectPos.current.x));
+        insectPos.current.y = Math.max(pad, Math.min(window.innerHeight - pad, insectPos.current.y));
+        // Pick a fresh waypoint inside the new bounds
+        const pad2 = 55;
+        wanderRef.current.waypointX = pad2 + Math.random() * Math.max(0, window.innerWidth  - pad2 * 2);
+        wanderRef.current.waypointY = pad2 + Math.random() * Math.max(0, window.innerHeight - pad2 * 2);
       }
     };
 
@@ -163,7 +201,7 @@ export default function CustomCursor() {
       });
     };
 
-    // Mobile touch interaction: tapping causes the 40 legs to flex with a shockwave
+    // Mobile touch interaction: startle — burst of speed + new direction
     const onTouchStart = () => {
       if (!isMobileRef.current) return;
       contractRef.current = 0.22;
@@ -174,6 +212,16 @@ export default function CustomCursor() {
         maxRadius: 40,
         alpha: 0.85,
       });
+      // Startle: pick new random waypoint and burst speed
+      const pad = 55;
+      wanderRef.current.waypointX = pad + Math.random() * Math.max(0, window.innerWidth  - pad * 2);
+      wanderRef.current.waypointY = pad + Math.random() * Math.max(0, window.innerHeight - pad * 2);
+      wanderRef.current.targetHeading = Math.atan2(
+        wanderRef.current.waypointY - insectPos.current.y,
+        wanderRef.current.waypointX - insectPos.current.x
+      );
+      wanderRef.current.targetSpeed = 65 + Math.random() * 25;
+      wanderRef.current.state = 'walking';
     };
 
     const onMouseLeave = () => {
@@ -262,47 +310,91 @@ export default function CustomCursor() {
         let speed = 0;
 
         if (mobile) {
-          // ── Mobile Autonomous Patrol Logic (Left <-> Right) ─────────────
-          const patrol = mobilePatrolRef.current;
-          const paddingX = 40;
-          const leftBound = paddingX;
-          const rightBound = window.innerWidth - paddingX;
+          // ── Full-Screen 2D Autonomous Wander ─────────────────────────────
+          const wander = wanderRef.current;
+          const pad = 55;
+          const W = window.innerWidth;
+          const H = window.innerHeight;
 
-          if (patrol.state === 'walking') {
-            speed = patrol.speed;
-            insect.x += patrol.dir * speed * dt;
+          if (wander.state === 'walking') {
+            // Smoothly lerp speed towards target speed
+            wander.speed += (wander.targetSpeed - wander.speed) * Math.min(dt * 2.5, 1);
+            speed = wander.speed;
 
-            // Target angle: 0 for walking right, Math.PI for walking left
-            const targetAngle = patrol.dir === 1 ? 0 : Math.PI;
-            let diff = targetAngle - angleRef.current;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            angleRef.current += diff * 0.18;
+            // Compute direction to current waypoint
+            const dxWP = wander.waypointX - insect.x;
+            const dyWP = wander.waypointY - insect.y;
+            const distWP = Math.hypot(dxWP, dyWP);
 
-            // Metachronal wave stepping
-            walkPhaseRef.current += dt * 13;
-
-            // Organic subtle vertical wave
-            insect.y = patrol.baseY + Math.sin(walkPhaseRef.current * 0.4) * 3;
-
-            // Check edge boundaries
-            if (patrol.dir === 1 && insect.x >= rightBound) {
-              insect.x = rightBound;
-              patrol.state = 'pausing';
-              patrol.pauseTimer = 0.65; // Pause at edge
-            } else if (patrol.dir === -1 && insect.x <= leftBound) {
-              insect.x = leftBound;
-              patrol.state = 'pausing';
-              patrol.pauseTimer = 0.65; // Pause at edge
+            if (distWP < 28) {
+              // Reached waypoint — pick a new one anywhere in viewport
+              wander.waypointX = pad + Math.random() * Math.max(0, W - pad * 2);
+              wander.waypointY = pad + Math.random() * Math.max(0, H - pad * 2);
+              // Occasional pause (30% chance)
+              if (Math.random() < 0.30) {
+                wander.state = 'pausing';
+                wander.pauseTimer = 0.55 + Math.random() * 1.1;
+                wander.targetSpeed = 0;
+              } else {
+                wander.targetSpeed = 28 + Math.random() * 32;
+                wander.targetHeading = Math.atan2(
+                  wander.waypointY - insect.y,
+                  wander.waypointX - insect.x
+                );
+              }
+            } else {
+              // Steer smoothly towards waypoint
+              wander.targetHeading = Math.atan2(dyWP, dxWP);
             }
-          } else if (patrol.state === 'pausing') {
-            speed = 2; // idle
-            walkPhaseRef.current += dt * 3; // Gentle breathing idle wave
-            patrol.pauseTimer -= dt;
 
-            if (patrol.pauseTimer <= 0) {
-              patrol.dir = -patrol.dir; // Switch direction
-              patrol.state = 'walking';
+            // Boundary repulsion: gently steer away from all four edges
+            const margin = 30;
+            if (insect.x < pad + margin)          wander.targetHeading = lerpAngle(wander.targetHeading, 0,            0.22);
+            if (insect.x > W - pad - margin)       wander.targetHeading = lerpAngle(wander.targetHeading, Math.PI,      0.22);
+            if (insect.y < pad + margin)           wander.targetHeading = lerpAngle(wander.targetHeading, Math.PI / 2,  0.22);
+            if (insect.y > H - pad - margin)       wander.targetHeading = lerpAngle(wander.targetHeading, -Math.PI / 2, 0.22);
+
+            // Smoothly rotate heading
+            wander.heading = lerpAngle(wander.heading, wander.targetHeading, Math.min(dt * 3.5, 1));
+
+            // Move insect
+            insect.x += Math.cos(wander.heading) * speed * dt;
+            insect.y += Math.sin(wander.heading) * speed * dt;
+
+            // Hard clamp to viewport
+            insect.x = Math.max(pad, Math.min(W - pad, insect.x));
+            insect.y = Math.max(pad, Math.min(H - pad, insect.y));
+
+            // Body angle tracks movement heading
+            angleRef.current = lerpAngle(angleRef.current, wander.heading, Math.min(dt * 8, 1));
+
+            // Leg stepping phase scales with speed
+            walkPhaseRef.current += dt * (6 + speed * 0.18);
+
+            // Random heading nudge timer (keeps path non-repetitive)
+            wander.waypointTimer -= dt;
+            if (wander.waypointTimer <= 0) {
+              wander.waypointTimer = 1.6 + Math.random() * 2.2;
+              wander.targetHeading += (Math.random() - 0.5) * 1.0;
+            }
+
+          } else if (wander.state === 'pausing') {
+            // Idle: antennae twitch, gentle leg sway
+            speed = 1.5;
+            walkPhaseRef.current += dt * 2.5;
+            wander.speed += (0 - wander.speed) * Math.min(dt * 6, 1);
+
+            wander.pauseTimer -= dt;
+            if (wander.pauseTimer <= 0) {
+              // Resume walking towards a fresh waypoint
+              wander.waypointX = pad + Math.random() * Math.max(0, W - pad * 2);
+              wander.waypointY = pad + Math.random() * Math.max(0, H - pad * 2);
+              wander.targetHeading = Math.atan2(
+                wander.waypointY - insect.y,
+                wander.waypointX - insect.x
+              );
+              wander.targetSpeed = 30 + Math.random() * 30;
+              wander.state = 'walking';
             }
           }
 
@@ -323,10 +415,7 @@ export default function CustomCursor() {
 
           if (dist > 0.8) {
             const targetAngle = Math.atan2(dy, dx);
-            let diff = targetAngle - angleRef.current;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            angleRef.current += diff * 0.28;
+            angleRef.current = lerpAngle(angleRef.current, targetAngle, 0.28);
           }
 
           const stepRate = isHovered ? Math.max(speed * 0.2, 0.08) : Math.max(speed * 0.12, 0.035);

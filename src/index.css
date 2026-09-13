@@ -2962,7 +2962,156 @@ section {
   }
 }
 
-/* ── 40-Legged Cyber Insect Custom Cursor ────────────────────────────────── */
+/* ── Desktop Coding Style Custom Cursor (</>) ─────────────────────────────── */
+.cursor-trail-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.cursor-code-symbol {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10001;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 16px;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease;
+  will-change: transform;
+}
+
+.cursor-code-symbol.hidden {
+  opacity: 0;
+}
+
+.cursor-code-glow {
+  position: absolute;
+  width: 36px;
+  height: 24px;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.2) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 75%);
+  filter: blur(4px);
+  opacity: 0.7;
+  transition: transform 0.24s ease, opacity 0.24s ease, background 0.24s ease;
+  pointer-events: none;
+}
+
+.cursor-code-svg {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.65)) drop-shadow(0 0 10px rgba(168, 85, 247, 0.3));
+  transition: filter 0.24s ease;
+}
+
+.code-bracket {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease;
+}
+
+.code-slash {
+  transition: stroke 0.2s ease, opacity 0.2s ease;
+}
+
+.cursor-code-symbol.hovered {
+  transform: translate(-50%, -50%) scale(1.24);
+}
+
+.cursor-code-symbol.hovered .cursor-code-glow {
+  opacity: 1;
+  transform: scale(1.4);
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.36) 0%, rgba(168, 85, 247, 0.18) 55%, transparent 80%);
+}
+
+.cursor-code-symbol.hovered .cursor-code-svg {
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.9)) drop-shadow(0 0 16px rgba(168, 85, 247, 0.5));
+}
+
+.cursor-code-symbol.hovered .code-bracket-left {
+  transform: translateX(-2.5px);
+}
+
+.cursor-code-symbol.hovered .code-bracket-right {
+  transform: translateX(2.5px);
+}
+
+.cursor-code-symbol.hovered .code-slash {
+  stroke: #ffffff !important;
+}
+
+.cursor-code-symbol.clicked {
+  transform: translate(-50%, -50%) scale(0.82);
+  transition: transform 0.08s ease;
+}
+
+.cursor-code-ripple {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-2);
+  pointer-events: none;
+  z-index: 10000;
+  will-change: transform, opacity;
+  animation: cursor-code-ripple-pulse 0.42s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes cursor-code-ripple-pulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.95;
+    border-color: var(--accent-2);
+    box-shadow: 0 0 8px var(--accent-2);
+  }
+  50% {
+    border-color: var(--accent-3);
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+    border-color: transparent;
+    box-shadow: 0 0 20px transparent;
+  }
+}
+
+[data-theme='light'] .cursor-code-glow {
+  background: radial-gradient(ellipse at center, rgba(79, 70, 229, 0.18) 0%, rgba(8, 145, 178, 0.08) 50%, transparent 75%);
+}
+
+[data-theme='light'] .cursor-code-svg {
+  filter: drop-shadow(0 0 5px rgba(79, 70, 229, 0.45));
+}
+
+[data-theme='light'] .cursor-code-symbol.hovered .cursor-code-glow {
+  background: radial-gradient(ellipse at center, rgba(79, 70, 229, 0.28) 0%, rgba(8, 145, 178, 0.14) 55%, transparent 80%);
+}
+
+[data-theme='light'] .cursor-code-symbol.hovered .cursor-code-svg {
+  filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.7));
+}
+
+[data-theme='light'] .cursor-code-symbol.hovered .code-slash {
+  stroke: var(--accent) !important;
+}
+
+[data-theme='light'] .cursor-code-ripple {
+  border-color: var(--accent);
+}
+
+/* ── Mobile Autonomous 40-Legged Cyber Insect Screen Character ──────────── */
 .cyber-insect-canvas {
   position: fixed;
   top: 0;
@@ -2970,7 +3119,7 @@ section {
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 10000;
+  z-index: 9990;
 }
 
 /* ── Mouse Spotlight (Ambient Follow Glow) ───────────────────────────────── */
