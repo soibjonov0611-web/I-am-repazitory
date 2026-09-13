@@ -1,23 +1,30 @@
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, Code2 } from 'lucide-react';
 import { profile, socials } from '../data/portfolio';
 import { useLanguage } from '../i18n/useLanguage';
 import { getIcon } from '../lib/icons';
-import { fadeUp, staggerContainer, EASE } from '../lib/motion';
+import { fadeUp, blurFadeUp, staggerContainer, EASE, AWWWARDS_EASE } from '../lib/motion';
+import Magnetic from './Magnetic';
 
 function scrollTo(id) {
   const el = document.querySelector(id);
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function CodeWindow() {
+function CodeWindow({ tiltX, tiltY }) {
   const { t } = useLanguage();
 
   return (
     <motion.div
       className="code-window"
-      initial={{ opacity: 0, y: 40, rotateX: 6 }}
+      initial={{ opacity: 0, y: 40, rotateX: 8 }}
       animate={{ opacity: 1, y: 0, rotateX: 0 }}
+      style={{
+        rotateX: tiltX,
+        rotateY: tiltY,
+        transformPerspective: 1000,
+      }}
       transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
     >
       <div className="code-topbar">
@@ -51,14 +58,15 @@ function CodeWindow() {
   );
 }
 
-function FloatingTech({ name, icon, className, delay }) {
+function FloatingTech({ name, icon, className, delay, offsetX, offsetY }) {
   const Icon = getIcon(icon);
 
   return (
     <motion.div
-      className={`tech-float ${className}`}
+      className={'tech-float ' + className}
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
+      style={{ x: offsetX, y: offsetY }}
       transition={{ duration: 0.5, delay, ease: EASE }}
     >
       <motion.div
@@ -78,21 +86,89 @@ function FloatingTech({ name, icon, className, delay }) {
   );
 }
 
+const dynamicRoles = [
+  'Frontend Developer',
+  'UI/UX & Motion Engineer',
+  'React Architecture Specialist',
+];
+
 export default function Hero() {
   const { t } = useLanguage();
+  const heroRef = useRef(null);
+  const [roleIdx, setRoleIdx] = useState(0);
+
+  // Dynamic role rotator
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRoleIdx((prev) => (prev + 1) % dynamicRoles.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Parallax Motion Values
+  const rawMouseX = useMotionValue(0);
+  const rawMouseY = useMotionValue(0);
+
+  const springX = useSpring(rawMouseX, { stiffness: 90, damping: 22 });
+  const springY = useSpring(rawMouseY, { stiffness: 90, damping: 22 });
+
+  const handleMouseMove = (e) => {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!heroRef.current) return;
+
+    const { left, top, width, height } = heroRef.current.getBoundingClientRect();
+    const x = (e.clientX - (left + width / 2)) / (width / 2);
+    const y = (e.clientY - (top + height / 2)) / (height / 2);
+
+    rawMouseX.set(x);
+    rawMouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    rawMouseX.set(0);
+    rawMouseY.set(0);
+  };
+
+  // Parallax Layer Transforms
+  const gridX = useTransform(springX, [-1, 1], [-14, 14]);
+  const gridY = useTransform(springY, [-1, 1], [-14, 14]);
+
+  const glow1X = useTransform(springX, [-1, 1], [-30, 30]);
+  const glow1Y = useTransform(springY, [-1, 1], [-30, 30]);
+
+  const glow2X = useTransform(springX, [-1, 1], [25, -25]);
+  const glow2Y = useTransform(springY, [-1, 1], [25, -25]);
+
+  const visualX = useTransform(springX, [-1, 1], [16, -16]);
+  const visualY = useTransform(springY, [-1, 1], [16, -16]);
+
+  const codeTiltX = useTransform(springY, [-1, 1], [6, -6]);
+  const codeTiltY = useTransform(springX, [-1, 1], [-8, 8]);
+
+  const badgeX = useTransform(springX, [-1, 1], [-22, 22]);
+  const badgeY = useTransform(springY, [-1, 1], [-22, 22]);
 
   return (
-    <section className="hero" id="top">
+    <section
+      className="hero"
+      id="top"
+      ref={heroRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="hero-bg" aria-hidden="true">
-        <div className="hero-grid" />
+        <motion.div className="hero-grid" style={{ x: gridX, y: gridY }} />
         <motion.div
           className="hero-glow glow-1"
-          animate={{ opacity: [0.35, 0.55, 0.35], x: [0, 30, 0], y: [0, 20, 0] }}
+          style={{ x: glow1X, y: glow1Y }}
+          animate={{ opacity: [0.35, 0.55, 0.35] }}
           transition={{ repeat: Infinity, duration: 14, ease: 'easeInOut' }}
         />
         <motion.div
           className="hero-glow glow-2"
-          animate={{ opacity: [0.3, 0.45, 0.3], x: [0, -24, 0] }}
+          style={{ x: glow2X, y: glow2Y }}
+          animate={{ opacity: [0.3, 0.45, 0.3] }}
           transition={{ repeat: Infinity, duration: 16, ease: 'easeInOut' }}
         />
         <div className="hero-glow glow-3" />
@@ -111,65 +187,83 @@ export default function Hero() {
               <span className="pulse-dot" />
               <span>{t('hero.statusLive')}</span>
             </div>
-            <span className="hero-role-pill">{profile.role}</span>
+            <div className="hero-role-pill-animated">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={dynamicRoles[roleIdx]}
+                  initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
+                  transition={{ duration: 0.32, ease: AWWWARDS_EASE }}
+                >
+                  {dynamicRoles[roleIdx]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
           </motion.div>
 
-          {/* Main Hero Heading */}
-          <motion.div variants={fadeUp()} className="hero-title-wrap">
-            <p className="hero-greeting">
+          {/* Main Hero Heading with Text Reveal */}
+          <motion.div variants={staggerContainer(0.06)} className="hero-title-wrap">
+            <motion.p className="hero-greeting" variants={blurFadeUp(0)}>
               <Sparkles size={16} className="sparkle-icon" />
               {t('hero.greeting')}
-            </p>
-            <h1 className="hero-name">
+            </motion.p>
+            <motion.h1 className="hero-name" variants={blurFadeUp(1)}>
               {profile.name}
-            </h1>
-            <h2 className="hero-subhead">
+            </motion.h1>
+            <motion.h2 className="hero-subhead" variants={blurFadeUp(2)}>
               {t('hero.titleStart')}{' '}
               <span className="gradient-text">{t('hero.titleEnd')}</span>
-            </h2>
+            </motion.h2>
           </motion.div>
 
-          <motion.p className="lead hero-desc" variants={fadeUp()}>
+          <motion.p className="lead hero-desc" variants={fadeUp(3)}>
             {t('hero.description')}
           </motion.p>
 
-          {/* Action CTAs */}
-          <motion.div className="hero-cta" variants={fadeUp()}>
-            <button
-              type="button"
-              className="btn btn-primary btn-lg"
-              onClick={() => scrollTo('#projects')}
-            >
-              <span>{t('hero.viewWork')}</span>
-              <ArrowRight size={17} />
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-lg"
-              onClick={() => scrollTo('#contact')}
-            >
-              {t('hero.contactMe')}
-            </button>
+          {/* Action CTAs with Magnetic Effect */}
+          <motion.div className="hero-cta" variants={fadeUp(4)}>
+            <Magnetic strength={0.28}>
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
+                onClick={() => scrollTo('#projects')}
+              >
+                <span>{t('hero.viewWork')}</span>
+                <ArrowRight size={17} />
+              </button>
+            </Magnetic>
+
+            <Magnetic strength={0.28}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-lg"
+                onClick={() => scrollTo('#contact')}
+              >
+                {t('hero.contactMe')}
+              </button>
+            </Magnetic>
           </motion.div>
 
           {/* Social Links & Quick Stats */}
-          <motion.div className="hero-bottom-row" variants={fadeUp()}>
+          <motion.div className="hero-bottom-row" variants={fadeUp(5)}>
             <div className="hero-socials">
               {socials.map((s) => {
                 const Icon = getIcon(s.icon);
                 const isMail = s.url.startsWith('mailto:');
                 return (
-                  <a
-                    key={s.name}
-                    className="social-btn"
-                    href={s.url}
-                    target={isMail ? undefined : '_blank'}
-                    rel={isMail ? undefined : 'noopener noreferrer'}
-                    aria-label={t(`hero.social${s.name}`) || s.name}
-                    title={s.name}
-                  >
-                    <Icon size={18} />
-                  </a>
+                  <Magnetic key={s.name} strength={0.35}>
+                    <a
+                      className="social-btn"
+                      href={s.url}
+                      target={isMail ? undefined : '_blank'}
+                      rel={isMail ? undefined : 'noopener noreferrer'}
+                      aria-label={t('hero.social' + s.name) || s.name}
+                      title={s.name}
+                    >
+                      <Icon size={18} />
+                    </a>
+                  </Magnetic>
                 );
               })}
             </div>
@@ -186,15 +280,15 @@ export default function Hero() {
           </motion.div>
         </motion.div>
 
-        {/* Hero Visual: Interactive Code Window + Floating Tech Badges */}
-        <div className="hero-visual" aria-hidden="true">
-          <CodeWindow />
-          <FloatingTech name="React" icon="react" className="tech-1" delay={0.6} />
-          <FloatingTech name="JavaScript" icon="js" className="tech-2" delay={0.75} />
-          <FloatingTech name="Vite" icon="vite" className="tech-3" delay={0.9} />
-          <FloatingTech name="Redux" icon="redux" className="tech-4" delay={1.05} />
-          <FloatingTech name="Git" icon="git" className="tech-5" delay={1.2} />
-        </div>
+        {/* Hero Visual: Interactive Code Window + Floating Tech Badges with 3D Parallax */}
+        <motion.div className="hero-visual" style={{ x: visualX, y: visualY }} aria-hidden="true">
+          <CodeWindow tiltX={codeTiltX} tiltY={codeTiltY} />
+          <FloatingTech name="React" icon="react" className="tech-1" delay={0.6} offsetX={badgeX} offsetY={badgeY} />
+          <FloatingTech name="JavaScript" icon="js" className="tech-2" delay={0.75} offsetX={badgeX} offsetY={badgeY} />
+          <FloatingTech name="Vite" icon="vite" className="tech-3" delay={0.9} offsetX={badgeX} offsetY={badgeY} />
+          <FloatingTech name="Redux" icon="redux" className="tech-4" delay={1.05} offsetX={badgeX} offsetY={badgeY} />
+          <FloatingTech name="Git" icon="git" className="tech-5" delay={1.2} offsetX={badgeX} offsetY={badgeY} />
+        </motion.div>
       </div>
     </section>
   );

@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowUpRight, Search, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowUpRight, CheckCircle2, ExternalLink, Info, Search, X } from 'lucide-react';
 import { projects, projectCategories } from '../data/portfolio';
 import { useLanguage } from '../i18n/useLanguage';
 import { GithubIcon } from '../lib/brandIcons';
-import { staggerContainer, scaleIn } from '../lib/motion';
+import { staggerContainer, scaleIn, EASE } from '../lib/motion';
 import SectionHeading from './SectionHeading';
+import TiltCard from './TiltCard';
+import Magnetic from './Magnetic';
 
 function MiniChart() {
   const bars = [38, 62, 48, 80, 58, 92, 70];
@@ -24,10 +26,10 @@ function MiniChart() {
           key={i}
           style={{
             flex: 1,
-            height: `${h}%`,
+            height: h + '%',
             minWidth: 8,
             borderRadius: 6,
-            background: `linear-gradient(180deg, var(--c2), color-mix(in srgb, var(--c1) 70%, transparent))`,
+            background: 'linear-gradient(180deg, var(--c2), color-mix(in srgb, var(--c1) 70%, transparent))',
             opacity: 0.85 + (i % 3) * 0.05,
           }}
         />
@@ -52,7 +54,7 @@ function MiniStore() {
             flex: 1,
             height: 46,
             borderRadius: 8,
-            background: `linear-gradient(135deg, var(--c1), var(--c2))`,
+            background: 'linear-gradient(135deg, var(--c1), var(--c2))',
             opacity: 0.8,
           }}
         />
@@ -61,17 +63,17 @@ function MiniStore() {
           <div className="preview-block mid" />
           <div
             className="preview-block"
-            style={{ width: '40%', background: `linear-gradient(90deg, var(--c1), var(--c2))`, opacity: 0.8 }}
+            style={{ width: '40%', background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.8 }}
           />
         </div>
       </div>
       <div className="preview-line">
         <div className="preview-block" />
-        <div className="preview-block" style={{ width: 30, background: `linear-gradient(90deg, var(--c1), var(--c2))`, opacity: 0.85 }} />
+        <div className="preview-block" style={{ width: 30, background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.85 }} />
       </div>
       <div className="preview-line">
         <div className="preview-block" />
-        <div className="preview-block" style={{ width: 30, background: `linear-gradient(90deg, var(--c1), var(--c2))`, opacity: 0.85 }} />
+        <div className="preview-block" style={{ width: 30, background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.85 }} />
       </div>
     </div>
   );
@@ -96,7 +98,7 @@ function MiniUI() {
           borderRadius: 8,
           display: 'grid',
           placeItems: 'center',
-          background: `linear-gradient(90deg, var(--c1), var(--c2))`,
+          background: 'linear-gradient(90deg, var(--c1), var(--c2))',
           fontSize: 10,
           fontWeight: 700,
           color: '#fff',
@@ -142,7 +144,7 @@ function MiniMap() {
             width: 12,
             height: 12,
             borderRadius: '50%',
-            background: `linear-gradient(135deg, var(--c1), var(--c2))`,
+            background: 'linear-gradient(135deg, var(--c1), var(--c2))',
             boxShadow: '0 0 14px rgba(99,102,241,0.6)',
           }}
         />
@@ -189,11 +191,28 @@ export default function Projects() {
   const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  useEffect(() => {
+    if (selectedProject) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') setSelectedProject(null);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [selectedProject]);
 
   const filteredProjects = projects.filter((project) => {
     const matchesCat = activeCategory === 'all' || project.category === activeCategory;
-    const name = t(`projects.${project.id}Name`).toLowerCase();
-    const desc = t(`projects.${project.id}Desc`).toLowerCase();
+    const name = t('projects.' + project.id + 'Name').toLowerCase();
+    const desc = t('projects.' + project.id + 'Desc').toLowerCase();
     const tech = project.technologies.join(' ').toLowerCase();
     const q = searchQuery.toLowerCase().trim();
 
@@ -222,7 +241,7 @@ export default function Projects() {
               <button
                 key={cat.id}
                 type="button"
-                className={`projects-tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                className={'projects-tab-btn ' + (activeCategory === cat.id ? 'active' : '')}
                 onClick={() => setActiveCategory(cat.id)}
               >
                 {t(cat.key)}
@@ -262,57 +281,59 @@ export default function Projects() {
         >
           {filteredProjects.length > 0 ? (
             filteredProjects.map((project) => {
-              const name = t(`projects.${project.id}Name`);
-              const desc = t(`projects.${project.id}Desc`);
+              const name = t('projects.' + project.id + 'Name');
+              const desc = t('projects.' + project.id + 'Desc');
 
               return (
-                <motion.article
-                  className="project-card"
-                  key={project.id}
-                  variants={scaleIn()}
-                  style={{ '--c1': project.accent[0], '--c2': project.accent[1] }}
-                  whileHover={{ y: -6, transition: { duration: 0.25 } }}
-                >
-                  <ProjectPreview pattern={project.pattern} />
+                <TiltCard key={project.id} maxTilt={7} style={{ height: '100%' }}>
+                  <motion.article
+                    className="project-card"
+                    variants={scaleIn()}
+                    style={{ '--c1': project.accent[0], '--c2': project.accent[1], height: '100%' }}
+                  >
+                    <ProjectPreview pattern={project.pattern} />
 
-                  <div className="project-body">
-                    <div className="project-title-row">
-                      <h3>{name}</h3>
-                      {project.featured && <span className="featured-badge">Featured</span>}
+                    <div className="project-body">
+                      <div className="project-title-row">
+                        <h3>{name}</h3>
+                        {project.featured && <span className="featured-badge">Featured</span>}
+                      </div>
+
+                      <p>{desc}</p>
+
+                      <div className="project-tech">
+                        {project.technologies.map((tech) => (
+                          <span className="tag" key={tech}>
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="project-actions">
+                        <Magnetic strength={0.2}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost project-details-btn"
+                            onClick={() => setSelectedProject(project)}
+                          >
+                            <Info size={15} /> {t('projects.viewDetails')}
+                          </button>
+                        </Magnetic>
+                        <Magnetic strength={0.2}>
+                          <a
+                            className="btn btn-primary"
+                            href={project.demo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={'Open ' + name + ' live demo'}
+                          >
+                            <ArrowUpRight size={16} /> {t('projects.demo')}
+                          </a>
+                        </Magnetic>
+                      </div>
                     </div>
-
-                    <p>{desc}</p>
-
-                    <div className="project-tech">
-                      {project.technologies.map((tech) => (
-                        <span className="tag" key={tech}>
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="project-actions">
-                      <a
-                        className="btn btn-ghost"
-                        href={project.github}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`${name} source code on GitHub`}
-                      >
-                        <GithubIcon size={16} /> {t('projects.github')}
-                      </a>
-                      <a
-                        className="btn btn-primary"
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Open ${name} live demo`}
-                      >
-                        <ArrowUpRight size={16} /> {t('projects.demo')}
-                      </a>
-                    </div>
-                  </div>
-                </motion.article>
+                  </motion.article>
+                </TiltCard>
               );
             })
           ) : (
@@ -332,6 +353,93 @@ export default function Projects() {
           )}
         </motion.div>
       </div>
+
+      {/* Interactive Project Detail Modal */}
+      <AnimatePresence>
+        {selectedProject && (
+          <div
+            className="modal-backdrop"
+            onClick={() => setSelectedProject(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <motion.div
+              className="project-modal"
+              style={{
+                '--c1': selectedProject.accent[0],
+                '--c2': selectedProject.accent[1],
+              }}
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedProject(null)}
+                aria-label={t('projects.modalClose')}
+              >
+                <X size={18} />
+              </button>
+
+              <div className="modal-header-preview">
+                <ProjectPreview pattern={selectedProject.pattern} />
+              </div>
+
+              <div className="modal-content">
+                <div className="modal-title-row">
+                  <h3 className="modal-title">
+                    {t('projects.' + selectedProject.id + 'Name')}
+                  </h3>
+                  <span className="modal-status-badge">
+                    <CheckCircle2 size={13} />
+                    {t('projects.statusCompleted')}
+                  </span>
+                </div>
+
+                <p className="modal-description">
+                  {t('projects.' + selectedProject.id + 'Desc')}
+                </p>
+
+                <div className="modal-tech-section">
+                  <span className="modal-tech-label">{t('projects.techStack')}</span>
+                  <div className="modal-tech-tags">
+                    {selectedProject.technologies.map((tech) => (
+                      <span className="tag" key={tech}>
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <a
+                    href={selectedProject.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-ghost"
+                  >
+                    <GithubIcon size={17} />
+                    {t('projects.github')}
+                    <ExternalLink size={14} />
+                  </a>
+                  <a
+                    href={selectedProject.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                  >
+                    <ArrowUpRight size={17} />
+                    {t('projects.demo')}
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

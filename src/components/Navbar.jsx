@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
 import { ChevronDown, Menu, Moon, Sun, X } from 'lucide-react';
 import { profile, navLinks } from '../data/portfolio';
 import { useLanguage } from '../i18n/useLanguage';
@@ -25,6 +25,13 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [langDropdown, setLangDropdown] = useState(false);
   const dropdownRef = useRef(null);
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
 
   useEffect(() => {
     const onScroll = () => {
@@ -69,6 +76,11 @@ export default function Navbar() {
 
   return (
     <header className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+      <motion.div
+        className="scroll-progress-bar"
+        style={{ scaleX, transformOrigin: '0%' }}
+        aria-hidden="true"
+      />
       <div className="container navbar-inner">
         <a
           href="#top"
@@ -88,20 +100,31 @@ export default function Navbar() {
         <div className="nav-right-actions">
           <nav aria-label="Main navigation" className="desktop-nav">
             <ul className="nav-links">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className={active === link.href.slice(1) ? 'active' : ''}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }}
-                  >
-                    {t(`nav.${link.key}`)}
-                  </a>
-                </li>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = active === link.href.slice(1);
+                return (
+                  <li key={link.href} className="nav-item">
+                    <a
+                      href={link.href}
+                      className={isActive ? 'active' : ''}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        scrollToSection(link.href);
+                      }}
+                    >
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-active-pill"
+                          className="nav-active-pill"
+                          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="nav-link-label">{t(`nav.${link.key}`)}</span>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 

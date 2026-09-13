@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -8,27 +9,38 @@ import Experience from './components/Experience';
 import GithubRepos from './components/GithubRepos';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import PageIntro from './components/PageIntro';
+import CustomCursor from './components/CustomCursor';
+import MouseSpotlight from './components/MouseSpotlight';
 import { fadeIn } from './lib/motion';
 
 function App() {
+  const [introFinished, setIntroFinished] = useState(false);
+
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={fadeIn()}
-    >
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Skills />
-        <Projects />
-        <Experience />
-        <GithubRepos />
-        <Contact />
-      </main>
-      <Footer />
-    </motion.div>
+    <>
+      <PageIntro onComplete={() => setIntroFinished(true)} />
+      <CustomCursor />
+      <MouseSpotlight />
+      <motion.div
+        initial="hidden"
+        animate={introFinished ? 'visible' : 'hidden'}
+        variants={fadeIn(0)}
+        className="app-root"
+      >
+        <Navbar />
+        <main>
+          <Hero />
+          <About />
+          <Skills />
+          <Projects />
+          <Experience />
+          <GithubRepos />
+          <Contact />
+        </main>
+        <Footer />
+      </motion.div>
+    </>
   );
 }
 
