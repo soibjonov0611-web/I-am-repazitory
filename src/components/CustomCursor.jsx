@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/useTheme';
 
-const NUM_PAIRS = 20; // 20 pairs = EXACTLY 40 legs (20 left, 20 right)
-const BODY_LENGTH = 22;
+const NUM_PAIRS = 20; // Exactly 20 pairs = EXACTLY 40 legs (20 left, 20 right)
+const BODY_LENGTH = 33; // 1.5x larger body (was 22)
 
 export default function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
@@ -15,15 +15,15 @@ export default function CustomCursor() {
   const hoveredRef = useRef(false);
   const isDarkRef = useRef(isDark);
 
-  // Mouse and insect kinematics state (kept in refs for 120 FPS without React re-renders)
+  // Kinematics state in refs for maximum 120 FPS performance without React re-renders
   const targetPos = useRef({ x: -100, y: -100 });
   const insectPos = useRef({ x: -100, y: -100 });
   const angleRef = useRef(0);
   const speedRef = useRef(0);
   const walkPhaseRef = useRef(0);
-  const contractRef = useRef(1.0); // 1.0 = normal, 0.2 = contracted on click
-  const trailRef = useRef([]); // Short micro-glow trail points
-  const ripplesRef = useRef([]); // Click shockwaves
+  const contractRef = useRef(1.0); // 1.0 = normal, 0.22 = contracted on click
+  const trailRef = useRef([]); // Micro-glow trail points
+  const ripplesRef = useRef([]); // Click shockwave ripples
   const animFrameRef = useRef(null);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function CustomCursor() {
     isDarkRef.current = isDark;
   }, [isDark]);
 
-  // Check fine pointer (desktop mouse) & reduced motion
+  // Check fine pointer (desktop mouse) & reduced motion preferences
   useEffect(() => {
     const finePointerQuery = window.matchMedia('(pointer: fine)');
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -56,7 +56,7 @@ export default function CustomCursor() {
     };
   }, []);
 
-  // Native cursor hiding on desktop
+  // Suppress desktop native cursor while custom cursor is active
   useEffect(() => {
     if (enabled && visible) {
       document.documentElement.classList.add('has-custom-cursor');
@@ -69,7 +69,7 @@ export default function CustomCursor() {
     };
   }, [enabled, visible]);
 
-  // Handle canvas sizing & DPR
+  // Canvas resize listener with High-DPI support
   useEffect(() => {
     if (!enabled) return;
 
@@ -104,14 +104,14 @@ export default function CustomCursor() {
     };
 
     const onMouseDown = () => {
-      // Contract all 40 legs tightly into the body
+      // Contract all 40 legs tightly into the carapace
       contractRef.current = 0.22;
       ripplesRef.current.push({
         x: targetPos.current.x,
         y: targetPos.current.y,
-        radius: 4,
-        maxRadius: 36,
-        alpha: 0.9,
+        radius: 6,
+        maxRadius: 44,
+        alpha: 0.95,
       });
     };
 
@@ -161,7 +161,7 @@ export default function CustomCursor() {
     };
   }, [enabled, visible]);
 
-  // Main high-performance procedural animation loop
+  // Main 120 FPS procedural animation & kinematics loop
   useEffect(() => {
     if (!enabled) return;
 
@@ -177,7 +177,6 @@ export default function CustomCursor() {
       const ctx = canvas.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
 
-      // Delta time in seconds
       const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
@@ -197,43 +196,43 @@ export default function CustomCursor() {
         const dy = target.y - insect.y;
         const dist = Math.hypot(dx, dy);
 
-        // Follow speed: fast enough to be accurate, smooth enough to feel organic
-        const followSpeed = isHovered ? 0.52 : 0.46;
+        // Responsive tracking speed: agile & natural
+        const followSpeed = isHovered ? 0.48 : 0.42;
         insect.x += dx * followSpeed;
         insect.y += dy * followSpeed;
 
         speedRef.current = dist;
 
-        // Smooth orientation heading
+        // Smooth orientation heading towards mouse trajectory
         if (dist > 0.8) {
           const targetAngle = Math.atan2(dy, dx);
           let diff = targetAngle - angleRef.current;
           while (diff < -Math.PI) diff += Math.PI * 2;
           while (diff > Math.PI) diff -= Math.PI * 2;
-          angleRef.current += diff * 0.3;
+          angleRef.current += diff * 0.28;
         }
 
         const angle = angleRef.current;
         const speed = speedRef.current;
 
-        // Step wave phase (faster when moving, gentle breathing when stopped)
-        const stepRate = isHovered ? Math.max(speed * 0.22, 0.08) : Math.max(speed * 0.14, 0.035);
+        // Metachronal stepping wave phase
+        const stepRate = isHovered ? Math.max(speed * 0.2, 0.08) : Math.max(speed * 0.12, 0.035);
         walkPhaseRef.current += stepRate;
         const walkPhase = walkPhaseRef.current;
 
-        // Rebound leg contraction back to 1.0 (spring physics on click)
+        // Rebound contraction back to 1.0 (spring physics on click)
         contractRef.current += (1.0 - contractRef.current) * 0.14;
         const contract = contractRef.current;
 
-        // Add subtle trail point if moving fast
-        if (speed > 2.5) {
+        // Dynamic trail generation when moving fast
+        if (speed > 2.0) {
           const tailDist = BODY_LENGTH * 0.95;
           const tailX = insect.x - Math.cos(angle) * tailDist;
           const tailY = insect.y - Math.sin(angle) * tailDist;
-          trailRef.current.push({ x: tailX, y: tailY, alpha: 0.45, radius: 1.6 });
+          trailRef.current.push({ x: tailX, y: tailY, alpha: 0.5, radius: 2.0 });
         }
 
-        // Draw and update micro glowing trail
+        // Render micro glowing trail
         for (let i = trailRef.current.length - 1; i >= 0; i--) {
           const tp = trailRef.current[i];
           tp.alpha -= dt * 2.2;
@@ -244,16 +243,16 @@ export default function CustomCursor() {
           ctx.beginPath();
           ctx.arc(tp.x, tp.y, tp.radius, 0, Math.PI * 2);
           ctx.fillStyle = isDarkTheme
-            ? `rgba(34, 211, 238, ${tp.alpha * 0.5})`
-            : `rgba(79, 70, 229, ${tp.alpha * 0.4})`;
+            ? `rgba(34, 211, 238, ${tp.alpha * 0.45})`
+            : `rgba(79, 70, 229, ${tp.alpha * 0.35})`;
           ctx.fill();
         }
 
-        // Draw and update click ripples
+        // Render click shockwave ripples
         for (let i = ripplesRef.current.length - 1; i >= 0; i--) {
           const rip = ripplesRef.current[i];
-          rip.radius += dt * 65;
-          rip.alpha -= dt * 2.4;
+          rip.radius += dt * 80;
+          rip.alpha -= dt * 2.2;
           if (rip.alpha <= 0) {
             ripplesRef.current.splice(i, 1);
             continue;
@@ -263,32 +262,36 @@ export default function CustomCursor() {
           ctx.strokeStyle = isDarkTheme
             ? `rgba(34, 211, 238, ${rip.alpha})`
             : `rgba(79, 70, 229, ${rip.alpha})`;
-          ctx.lineWidth = 1.2;
+          ctx.lineWidth = 1.3;
           ctx.stroke();
         }
 
-        // ── Render 40 Procedural Cyber Legs (20 Left, 20 Right) ─────────────
-        // Drag angle when moving fast (legs stream back like an agile cyber millipede)
-        const lagAngle = -Math.min(speed * 0.035, 0.45);
-        const stretch = 1 + Math.min(speed * 0.02, 0.25);
-        const spreadFactor = (isHovered ? 1.22 : 1.0) * contract;
+        // ── Render EXACTLY 40 Long, Elegant Cyber Legs (20 Left, 20 Right) ──
+        // Elastic trailing lag when moving fast
+        const lagAngle = -Math.min(speed * 0.045, 0.58);
+        const stretch = 1 + Math.min(speed * 0.025, 0.3);
+        const spreadFactor = (isHovered ? 1.32 : 1.0) * contract;
 
-        ctx.lineWidth = 1.1;
+        ctx.lineWidth = 1.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+
+        // Subtle futuristic leg glow
+        ctx.shadowBlur = isDarkTheme ? (isHovered ? 10 : 5) : 4;
+        ctx.shadowColor = isDarkTheme ? 'rgba(34, 211, 238, 0.5)' : 'rgba(79, 70, 229, 0.4)';
 
         for (let i = 0; i < NUM_PAIRS; i++) {
           const t = i / (NUM_PAIRS - 1); // 0 (front near head) -> 1 (rear at tail)
 
-          // Distance along spine from head (2px to 21px)
-          const spineDist = 2.5 + t * (BODY_LENGTH - 3.5);
+          // Spine position along carapace
+          const spineDist = 3.5 + t * (BODY_LENGTH - 5.0);
           const sx = insect.x - Math.cos(angle) * spineDist;
           const sy = insect.y - Math.sin(angle) * spineDist;
 
-          // Carapace width at this segment (curved, tapered body)
-          const w = (Math.sin(t * Math.PI) * 2.8 + 1.2) * (isHovered ? 1.05 : 1.0);
+          // Carapace width at this segment (1.5x scaled)
+          const w = (Math.sin(t * Math.PI) * 3.8 + 1.8) * (isHovered ? 1.08 : 1.0);
 
-          // Base attachment points on left and right side of carapace
+          // Perpendicular side vectors
           const perpX = -Math.sin(angle);
           const perpY = Math.cos(angle);
 
@@ -298,24 +301,24 @@ export default function CustomCursor() {
           const rightBaseX = sx - perpX * w;
           const rightBaseY = sy - perpY * w;
 
-          // Metachronal wave procedural swing across legs
-          const segmentPhase = walkPhase - i * 0.48;
-          const swing = Math.sin(segmentPhase) * (Math.min(speed * 0.07, 0.35) + (isHovered ? 0.32 : 0.12));
+          // Metachronal wave swing per leg
+          const segmentPhase = walkPhase - i * 0.44;
+          const swing = Math.sin(segmentPhase) * (Math.min(speed * 0.08, 0.38) + (isHovered ? 0.35 : 0.12));
 
-          // Base leg length (slightly longer in middle segments)
-          const baseLen = (Math.sin(t * Math.PI) * 3.5 + 6.5) * stretch * spreadFactor;
-          const femurLen = baseLen * 0.52;
-          const tibiaLen = baseLen * 0.58;
+          // Long, elegant leg length (significantly longer than before: 16px to 24px)
+          const baseLen = (Math.sin(t * Math.PI) * 7.5 + 15.5) * stretch * spreadFactor;
+          const femurLen = baseLen * 0.48;
+          const tibiaLen = baseLen * 0.62;
 
-          // Directional angle offset (front legs angle forward, rear angle backward)
-          const angleOffset = (t - 0.45) * 0.35;
+          // Leg angle offsets (front legs point forward, rear legs sweep backward)
+          const angleOffset = (t - 0.42) * 0.45;
 
           // Left Leg (1)
           const leftKneeAngle = angle + Math.PI / 2 + angleOffset + swing + lagAngle;
           const lkx = leftBaseX + Math.cos(leftKneeAngle) * femurLen;
           const lky = leftBaseY + Math.sin(leftKneeAngle) * femurLen;
 
-          const leftFootAngle = leftKneeAngle + 0.38 + swing * 0.4;
+          const leftFootAngle = leftKneeAngle + 0.42 + swing * 0.35;
           const lfx = lkx + Math.cos(leftFootAngle) * tibiaLen;
           const lfy = lky + Math.sin(leftFootAngle) * tibiaLen;
 
@@ -324,12 +327,12 @@ export default function CustomCursor() {
           const rkx = rightBaseX + Math.cos(rightKneeAngle) * femurLen;
           const rky = rightBaseY + Math.sin(rightKneeAngle) * femurLen;
 
-          const rightFootAngle = rightKneeAngle - 0.38 - swing * 0.4;
+          const rightFootAngle = rightKneeAngle - 0.42 - swing * 0.35;
           const rfx = rkx + Math.cos(rightFootAngle) * tibiaLen;
           const rfy = rky + Math.sin(rightFootAngle) * tibiaLen;
 
-          // Leg stroke styling (futuristic cyber gradient look)
-          const legAlpha = 0.55 + Math.sin(t * Math.PI) * 0.35;
+          // Dynamic leg coloring (cyan fading to purple towards tips)
+          const legAlpha = 0.6 + Math.sin(t * Math.PI) * 0.35;
           ctx.strokeStyle = isDarkTheme
             ? `rgba(34, 211, 238, ${isHovered ? 0.95 : legAlpha})`
             : `rgba(8, 145, 178, ${isHovered ? 0.9 : legAlpha})`;
@@ -348,13 +351,13 @@ export default function CustomCursor() {
           ctx.lineTo(rfx, rfy);
           ctx.stroke();
 
-          // Tiny glowing foot claw node
+          // Glowing foot claw tip node
           ctx.fillStyle = isDarkTheme ? '#22d3ee' : '#0891b2';
-          ctx.fillRect(lfx - 0.6, lfy - 0.6, 1.2, 1.2);
-          ctx.fillRect(rfx - 0.6, rfy - 0.6, 1.2, 1.2);
+          ctx.fillRect(lfx - 0.75, lfy - 0.75, 1.5, 1.5);
+          ctx.fillRect(rfx - 0.75, rfy - 0.75, 1.5, 1.5);
         }
 
-        // ── Render Central Cybernetic Body (Carapace) ───────────────────────
+        // ── Render Central Cybernetic Carapace (Body) ───────────────────────
         const bodyCenterDist = BODY_LENGTH * 0.48;
         const bcx = insect.x - Math.cos(angle) * bodyCenterDist;
         const bcy = insect.y - Math.sin(angle) * bodyCenterDist;
@@ -363,88 +366,88 @@ export default function CustomCursor() {
         ctx.translate(bcx, bcy);
         ctx.rotate(angle);
 
-        // Ambient cyber glow behind carapace
-        ctx.shadowBlur = isDarkTheme ? (isHovered ? 12 : 7) : 5;
+        // Carapace glow
+        ctx.shadowBlur = isDarkTheme ? (isHovered ? 14 : 8) : 6;
         ctx.shadowColor = isDarkTheme ? '#22d3ee' : '#6366f1';
 
-        // Carapace shell
+        // Carapace exoskeleton shell (1.5x scaled)
         ctx.beginPath();
         const halfLen = BODY_LENGTH * 0.48;
-        const halfWidth = isHovered ? 3.4 : 3.0;
+        const halfWidth = isHovered ? 5.2 : 4.5;
         ctx.ellipse(0, 0, halfLen, halfWidth, 0, 0, Math.PI * 2);
 
         ctx.fillStyle = isDarkTheme ? '#0b0f19' : '#1e2238';
         ctx.fill();
 
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.3;
         ctx.strokeStyle = isDarkTheme
-          ? (isHovered ? '#22d3ee' : 'rgba(34, 211, 238, 0.75)')
-          : (isHovered ? '#0891b2' : 'rgba(79, 70, 229, 0.75)');
+          ? (isHovered ? '#22d3ee' : 'rgba(34, 211, 238, 0.85)')
+          : (isHovered ? '#0891b2' : 'rgba(79, 70, 229, 0.85)');
         ctx.stroke();
 
-        // Cybernetic segment panel lines along carapace
-        ctx.strokeStyle = isDarkTheme ? 'rgba(168, 85, 247, 0.5)' : 'rgba(99, 102, 241, 0.4)';
-        ctx.lineWidth = 0.8;
-        for (let s = -halfLen + 3; s < halfLen - 2; s += 3.5) {
+        // Futuristic segment paneling lines
+        ctx.strokeStyle = isDarkTheme ? 'rgba(168, 85, 247, 0.55)' : 'rgba(99, 102, 241, 0.45)';
+        ctx.lineWidth = 0.9;
+        for (let s = -halfLen + 4; s < halfLen - 3; s += 4.5) {
           ctx.beginPath();
           ctx.moveTo(s, -halfWidth * 0.75);
           ctx.lineTo(s, halfWidth * 0.75);
           ctx.stroke();
         }
 
-        // Thorax Core Reactor (Pulsing cyber crystal)
-        const corePulse = 0.8 + Math.sin(time * 0.006) * 0.25;
+        // Thorax Core Reactor
+        const corePulse = 0.85 + Math.sin(time * 0.007) * 0.25;
         ctx.beginPath();
-        ctx.arc(0, 0, 1.4 * corePulse, 0, Math.PI * 2);
+        ctx.arc(0, 0, 2.0 * corePulse, 0, Math.PI * 2);
         ctx.fillStyle = isDarkTheme ? '#ffffff' : '#22d3ee';
         ctx.fill();
 
         ctx.restore();
 
-        // ── Render Head, Eyes, and Antennae ─────────────────────────────────
+        // ── Render Head, Sensory Eyes, and Antennae ─────────────────────────
         ctx.save();
         ctx.translate(insect.x, insect.y);
         ctx.rotate(angle);
 
         // Head plate
         ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 2.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 4.5, 3.6, 0, 0, Math.PI * 2);
         ctx.fillStyle = isDarkTheme ? '#101626' : '#1e2238';
         ctx.fill();
         ctx.strokeStyle = isDarkTheme ? '#22d3ee' : '#0891b2';
-        ctx.lineWidth = 1.1;
+        ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Two glowing cybernetic eyes/sensors
+        // Two glowing cybernetic eyes
         const eyeColor = isHovered ? '#ffffff' : (isDarkTheme ? '#22d3ee' : '#0891b2');
         ctx.fillStyle = eyeColor;
         ctx.beginPath();
-        ctx.arc(1.6, -1.3, 0.85, 0, Math.PI * 2);
-        ctx.arc(1.6, 1.3, 0.85, 0, Math.PI * 2);
+        ctx.arc(2.2, -1.8, 1.2, 0, Math.PI * 2);
+        ctx.arc(2.2, 1.8, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Dual Antennae (Curving forward sensors)
-        ctx.strokeStyle = isDarkTheme ? 'rgba(34, 211, 238, 0.8)' : 'rgba(79, 70, 229, 0.8)';
-        ctx.lineWidth = 0.9;
+        // Dual Antennae (Long, graceful sensors)
+        ctx.strokeStyle = isDarkTheme ? 'rgba(34, 211, 238, 0.85)' : 'rgba(79, 70, 229, 0.85)';
+        ctx.lineWidth = 1.0;
 
-        const antWave = Math.sin(time * 0.008) * 0.15;
+        const antWave = Math.sin(time * 0.008) * 0.2;
 
         // Left antenna
         ctx.beginPath();
-        ctx.moveTo(2.4, -1.0);
-        ctx.quadraticCurveTo(5.0, -3.2 + antWave * 4, 7.5, -4.2 + antWave * 2);
+        ctx.moveTo(3.2, -1.4);
+        ctx.quadraticCurveTo(6.8, -4.5 + antWave * 5, 10.5, -5.8 + antWave * 3);
         ctx.stroke();
 
         // Right antenna
         ctx.beginPath();
-        ctx.moveTo(2.4, 1.0);
-        ctx.quadraticCurveTo(5.0, 3.2 - antWave * 4, 7.5, 4.2 - antWave * 2);
+        ctx.moveTo(3.2, 1.4);
+        ctx.quadraticCurveTo(6.8, 4.5 - antWave * 5, 10.5, 5.8 - antWave * 3);
         ctx.stroke();
 
-        // Antenna tip sensory dots
+        // Antenna sensory tip dots
         ctx.fillStyle = isHovered ? '#ffffff' : (isDarkTheme ? '#a855f7' : '#4f46e5');
-        ctx.fillRect(7.5 - 0.5, -4.2 + antWave * 2 - 0.5, 1.0, 1.0);
-        ctx.fillRect(7.5 - 0.5, 4.2 - antWave * 2 - 0.5, 1.0, 1.0);
+        ctx.fillRect(10.5 - 0.75, -5.8 + antWave * 3 - 0.75, 1.5, 1.5);
+        ctx.fillRect(10.5 - 0.75, 5.8 - antWave * 3 - 0.75, 1.5, 1.5);
 
         ctx.restore();
 
