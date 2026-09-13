@@ -2946,62 +2946,221 @@ section {
   transform-origin: left;
 }
 
-/* ── Custom Cursor ───────────────────────────────────────────────────────── */
-.cursor-dot {
+/* ── Custom Cursor — Dark Futuristic HUD & Trail ─────────────────────────── */
+.cursor-trail-canvas {
   position: fixed;
   top: 0;
   left: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.cursor-core {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10001;
+  transition: opacity 0.2s ease;
+  will-change: transform;
+}
+
+.cursor-core.hidden {
+  opacity: 0;
+}
+
+.cursor-core-diamond {
+  display: block;
+  width: 5px;
+  height: 5px;
   background: var(--accent-2);
-  pointer-events: none;
-  z-index: 10000;
-  box-shadow: 0 0 12px var(--accent-2);
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 1px;
+  box-shadow: 0 0 8px var(--accent-2), 0 0 16px rgba(99, 102, 241, 0.6);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              box-shadow 0.2s ease;
 }
 
-.cursor-ring {
+.cursor-core.hovered .cursor-core-diamond {
+  transform: translate(-50%, -50%) rotate(45deg) scale(1.4);
+  background: #ffffff;
+  box-shadow: 0 0 12px var(--accent-2), 0 0 20px rgba(34, 211, 238, 0.85);
+}
+
+.cursor-core.clicked .cursor-core-diamond {
+  transform: translate(-50%, -50%) rotate(45deg) scale(0.65);
+}
+
+.cursor-reticle {
   position: fixed;
   top: 0;
   left: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(34, 211, 238, 0.5);
-  pointer-events: none;
-  z-index: 9999;
-  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              background 0.22s ease,
-              border-color 0.22s ease,
-              box-shadow 0.22s ease;
-}
-
-.cursor-ring.hovered {
-  width: 56px;
-  height: 56px;
-  background: rgba(99, 102, 241, 0.14);
-  border-color: var(--accent-2);
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.35);
-}
-
-.cursor-ring.clicked {
   width: 28px;
   height: 28px;
-  background: rgba(34, 211, 238, 0.28);
-  border-color: #fff;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease;
+  will-change: transform, width, height;
 }
 
-[data-theme='light'] .cursor-dot {
+.cursor-reticle.hidden {
+  opacity: 0;
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: rgba(34, 211, 238, 0.7);
+  border-style: solid;
+  transition: border-color 0.24s ease,
+              width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.24s ease;
+}
+
+.reticle-tl {
+  top: 0;
+  left: 0;
+  border-width: 1.5px 0 0 1.5px;
+  border-top-left-radius: 2px;
+}
+
+.reticle-tr {
+  top: 0;
+  right: 0;
+  border-width: 1.5px 1.5px 0 0;
+  border-top-right-radius: 2px;
+}
+
+.reticle-bl {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1.5px 1.5px;
+  border-bottom-left-radius: 2px;
+}
+
+.reticle-br {
+  bottom: 0;
+  right: 0;
+  border-width: 0 1.5px 1.5px 0;
+  border-bottom-right-radius: 2px;
+}
+
+.reticle-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(34, 211, 238, 0.05) 50%, transparent 80%);
+  border: 1px solid transparent;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.26s ease, transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.26s ease;
+}
+
+/* Hovered state: expands, illuminates HUD target lock */
+.cursor-reticle.hovered {
+  width: 48px;
+  height: 48px;
+}
+
+.cursor-reticle.hovered .reticle-corner {
+  width: 9px;
+  height: 9px;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.45);
+}
+
+.cursor-reticle.hovered .reticle-glow {
+  opacity: 1;
+  transform: scale(1);
+  border-color: rgba(34, 211, 238, 0.32);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.22);
+}
+
+/* Clicked state: snaps inward with tactile feedback */
+.cursor-reticle.clicked {
+  width: 22px;
+  height: 22px;
+  transition: width 0.1s ease, height 0.1s ease;
+}
+
+.cursor-reticle.clicked .reticle-corner {
+  border-color: #ffffff;
+  box-shadow: 0 0 12px #22d3ee;
+}
+
+/* Click Ripple shockwave */
+.cursor-ripple {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-2);
+  pointer-events: none;
+  z-index: 10000;
+  will-change: transform, opacity;
+  animation: cursor-ripple-pulse 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes cursor-ripple-pulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.95;
+    border-color: var(--accent-2);
+    box-shadow: 0 0 10px var(--accent-2);
+  }
+  50% {
+    border-color: var(--accent-3);
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+    border-color: transparent;
+    box-shadow: 0 0 24px transparent;
+  }
+}
+
+/* ── Light Mode Override ─────────────────────────────────────────────────── */
+[data-theme='light'] .cursor-core-diamond {
   background: var(--accent);
+  box-shadow: 0 0 8px rgba(79, 70, 229, 0.6);
 }
 
-[data-theme='light'] .cursor-ring {
-  border-color: rgba(79, 70, 229, 0.45);
+[data-theme='light'] .cursor-core.hovered .cursor-core-diamond {
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.8);
 }
 
-[data-theme='light'] .cursor-ring.hovered {
-  background: rgba(79, 70, 229, 0.1);
+[data-theme='light'] .cursor-reticle .reticle-corner {
+  border-color: rgba(79, 70, 229, 0.65);
+}
+
+[data-theme='light'] .cursor-reticle.hovered .reticle-corner {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
+}
+
+[data-theme='light'] .cursor-reticle.hovered .reticle-glow {
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, rgba(8, 145, 178, 0.05) 50%, transparent 80%);
+  border-color: rgba(79, 70, 229, 0.25);
+  box-shadow: 0 0 16px rgba(79, 70, 229, 0.15);
+}
+
+[data-theme='light'] .cursor-ripple {
   border-color: var(--accent);
 }
 
@@ -3094,7 +3253,7 @@ section {
   font-weight: 600;
 }
 
-/* ── Reduced Motion Media Query ──────────────────────────────────────────── */
+/* ── Reduced Motion & Touch Devices ───────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -3105,8 +3264,20 @@ section {
     scroll-behavior: auto !important;
   }
 
-  .cursor-dot,
-  .cursor-ring,
+  .cursor-core,
+  .cursor-reticle,
+  .cursor-trail-canvas,
+  .cursor-ripple,
+  .mouse-spotlight {
+    display: none !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .cursor-core,
+  .cursor-reticle,
+  .cursor-trail-canvas,
+  .cursor-ripple,
   .mouse-spotlight {
     display: none !important;
   }
