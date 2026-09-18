@@ -9,71 +9,71 @@ import SectionHeading from './SectionHeading';
 import TiltCard from './TiltCard';
 import Magnetic from './Magnetic';
 
+function BrowserHeader({ path }) {
+  return (
+    <div className="preview-browser-header">
+      <div className="preview-dots">
+        <span className="dot dot-red" />
+        <span className="dot dot-yellow" />
+        <span className="dot dot-green" />
+      </div>
+      <div className="preview-url-bar">
+        <span className="preview-url-proto">https://</span>
+        <span className="preview-url-path">{path}</span>
+      </div>
+      <div className="preview-status-pill">
+        <span className="preview-pulse-dot" />
+        <span>LIVE</span>
+      </div>
+    </div>
+  );
+}
+
 function MiniChart() {
   const bars = [38, 62, 48, 80, 58, 92, 70];
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 8,
-        height: 130,
-        width: '76%',
-      }}
-    >
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          style={{
-            flex: 1,
-            height: h + '%',
-            minWidth: 8,
-            borderRadius: 6,
-            background: 'linear-gradient(180deg, var(--c2), color-mix(in srgb, var(--c1) 70%, transparent))',
-            opacity: 0.85 + (i % 3) * 0.05,
-          }}
-        />
-      ))}
+    <div className="preview-mockup preview-mockup-chart">
+      <div className="chart-bars-wrap">
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            className="chart-bar"
+            style={{
+              height: h + '%',
+              background: 'linear-gradient(180deg, var(--c2), color-mix(in srgb, var(--c1) 70%, transparent))',
+            }}
+          />
+        ))}
+      </div>
+      <div className="chart-hud-overlay">
+        <div className="hud-metric">
+          <span className="hud-label">TPS RATE</span>
+          <span className="hud-val">99.8%</span>
+        </div>
+        <div className="hud-metric">
+          <span className="hud-label">LATENCY</span>
+          <span className="hud-val">12ms</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 function MiniStore() {
   return (
-    <div className="preview-phone">
-      <div className="preview-dots">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="preview-bar" style={{ height: 18, opacity: 0.7 }} />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div
-          className="preview-block"
-          style={{
-            flex: 1,
-            height: 46,
-            borderRadius: 8,
-            background: 'linear-gradient(135deg, var(--c1), var(--c2))',
-            opacity: 0.8,
-          }}
-        />
-        <div style={{ flex: 1.4, display: 'grid', gap: 6, alignContent: 'center' }}>
-          <div className="preview-block wide" />
-          <div className="preview-block mid" />
-          <div
-            className="preview-block"
-            style={{ width: '40%', background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.8 }}
-          />
+    <div className="preview-mockup preview-mockup-store">
+      <div className="store-header-bar" />
+      <div className="store-grid">
+        <div className="store-card store-card-feature" />
+        <div className="store-col">
+          <div className="store-line store-line-lg" />
+          <div className="store-line store-line-md" />
+          <div className="store-line store-line-sm" />
         </div>
       </div>
-      <div className="preview-line">
-        <div className="preview-block" />
-        <div className="preview-block" style={{ width: 30, background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.85 }} />
-      </div>
-      <div className="preview-line">
-        <div className="preview-block" />
-        <div className="preview-block" style={{ width: 30, background: 'linear-gradient(90deg, var(--c1), var(--c2))', opacity: 0.85 }} />
+      <div className="store-footer-bar">
+        <span className="store-badge">ZUSTAND STORE</span>
+        <span className="store-price">$129.00</span>
       </div>
     </div>
   );
@@ -81,36 +81,15 @@ function MiniStore() {
 
 function MiniUI() {
   return (
-    <div className="preview-phone" style={{ width: '62%', maxWidth: 260 }}>
-      <div className="preview-bar" style={{ height: 20 }} />
-      <div className="preview-block mid" />
-      <div
-        style={{
-          height: 34,
-          borderRadius: 8,
-          background: 'transparent',
-          border: '1.5px solid color-mix(in srgb, var(--c1) 60%, transparent)',
-        }}
-      />
-      <div
-        style={{
-          height: 34,
-          borderRadius: 8,
-          display: 'grid',
-          placeItems: 'center',
-          background: 'linear-gradient(90deg, var(--c1), var(--c2))',
-          fontSize: 10,
-          fontWeight: 700,
-          color: '#fff',
-          fontFamily: 'var(--font-mono)',
-        }}
-      >
-        Live Component →
+    <div className="preview-mockup preview-mockup-ui">
+      <div className="ui-header-line" />
+      <div className="ui-component-preview">
+        <div className="ui-badge-pill">Framer Motion</div>
+        <div className="ui-interactive-btn">Interactive Component →</div>
       </div>
-      <div className="preview-line">
-        <div className="preview-block" />
-        <div className="preview-block" style={{ width: 44 }} />
-        <div className="preview-block" style={{ width: 26 }} />
+      <div className="ui-sliders-wrap">
+        <div className="ui-slider-track"><span className="ui-slider-thumb" /></div>
+        <div className="ui-slider-track track-2"><span className="ui-slider-thumb" /></div>
       </div>
     </div>
   );
@@ -118,47 +97,30 @@ function MiniUI() {
 
 function MiniMap() {
   const points = [
-    { top: '18%', left: '18%' },
-    { top: '58%', left: '30%' },
-    { top: '34%', left: '62%' },
-    { top: '68%', left: '70%' },
+    { top: '20%', left: '20%' },
+    { top: '56%', left: '32%' },
+    { top: '34%', left: '60%' },
+    { top: '66%', left: '72%' },
   ];
   return (
-    <div
-      style={{
-        width: '72%',
-        aspectRatio: '1.4',
-        borderRadius: 12,
-        border: '1px solid var(--border-strong)',
-        background:
-          'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0 10px, transparent 10px 20px)',
-        position: 'relative',
-      }}
-    >
+    <div className="preview-mockup preview-mockup-map">
       {points.map((p, i) => (
         <div
           key={i}
-          style={{
-            position: 'absolute',
-            ...p,
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--c1), var(--c2))',
-            boxShadow: '0 0 14px rgba(99,102,241,0.6)',
-          }}
+          className="map-node"
+          style={{ position: 'absolute', ...p }}
         />
       ))}
       <svg
         viewBox="0 0 100 100"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        className="map-svg-line"
         preserveAspectRatio="none"
       >
         <polyline
           points="20,26 34,58 62,40 72,70"
           fill="none"
           stroke="url(#route)"
-          strokeWidth="1.5"
+          strokeWidth="1.6"
           strokeDasharray="4 4"
           vectorEffect="non-scaling-stroke"
         />
@@ -169,13 +131,22 @@ function MiniMap() {
           </linearGradient>
         </defs>
       </svg>
+      <div className="map-hud-badge">GEO ROUTING // ACTIVE</div>
     </div>
   );
 }
 
-function ProjectPreview({ pattern }) {
+function ProjectPreview({ pattern, id }) {
+  const paths = {
+    p1: 'saipov.dev/analytics',
+    p2: 'saipov.dev/ecommerce',
+    p3: 'saipov.dev/ui-system',
+    p4: 'saipov.dev/geo-routes',
+  };
+
   return (
     <div className="project-preview" aria-hidden="true">
+      <BrowserHeader path={paths[id] || 'saipov.dev/project'} />
       <div className="preview-grid" />
       <div className="preview-stage">
         {pattern === 'chart' && <MiniChart />}
@@ -183,6 +154,7 @@ function ProjectPreview({ pattern }) {
         {pattern === 'ui' && <MiniUI />}
         {pattern === 'map' && <MiniMap />}
       </div>
+      <div className="preview-glow-edge" />
     </div>
   );
 }
@@ -285,13 +257,13 @@ export default function Projects() {
               const desc = t('projects.' + project.id + 'Desc');
 
               return (
-                <TiltCard key={project.id} maxTilt={7} style={{ height: '100%' }}>
+                <TiltCard key={project.id} maxTilt={6} style={{ height: '100%' }}>
                   <motion.article
                     className="project-card"
                     variants={scaleIn()}
                     style={{ '--c1': project.accent[0], '--c2': project.accent[1], height: '100%' }}
                   >
-                    <ProjectPreview pattern={project.pattern} />
+                    <ProjectPreview pattern={project.pattern} id={project.id} />
 
                     <div className="project-body">
                       <div className="project-title-row">
@@ -309,16 +281,8 @@ export default function Projects() {
                         ))}
                       </div>
 
+                      {/* Project Actions: BOTH GitHub & Live Demo & Details */}
                       <div className="project-actions">
-                        <Magnetic strength={0.2}>
-                          <button
-                            type="button"
-                            className="btn btn-ghost project-details-btn"
-                            onClick={() => setSelectedProject(project)}
-                          >
-                            <Info size={15} /> {t('projects.viewDetails')}
-                          </button>
-                        </Magnetic>
                         <Magnetic strength={0.2}>
                           <a
                             className="btn btn-primary"
@@ -329,6 +293,30 @@ export default function Projects() {
                           >
                             <ArrowUpRight size={16} /> {t('projects.demo')}
                           </a>
+                        </Magnetic>
+
+                        <Magnetic strength={0.2}>
+                          <a
+                            className="btn btn-ghost"
+                            href={project.github}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={'View ' + name + ' source code on GitHub'}
+                          >
+                            <GithubIcon size={16} /> {t('projects.github')}
+                          </a>
+                        </Magnetic>
+
+                        <Magnetic strength={0.15}>
+                          <button
+                            type="button"
+                            className="btn btn-details-icon"
+                            onClick={() => setSelectedProject(project)}
+                            aria-label={t('projects.viewDetails')}
+                            title={t('projects.viewDetails')}
+                          >
+                            <Info size={16} />
+                          </button>
                         </Magnetic>
                       </div>
                     </div>
@@ -385,7 +373,7 @@ export default function Projects() {
               </button>
 
               <div className="modal-header-preview">
-                <ProjectPreview pattern={selectedProject.pattern} />
+                <ProjectPreview pattern={selectedProject.pattern} id={selectedProject.id} />
               </div>
 
               <div className="modal-content">
@@ -416,6 +404,15 @@ export default function Projects() {
 
                 <div className="modal-actions">
                   <a
+                    href={selectedProject.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                  >
+                    <ArrowUpRight size={17} />
+                    {t('projects.demo')}
+                  </a>
+                  <a
                     href={selectedProject.github}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -424,15 +421,6 @@ export default function Projects() {
                     <GithubIcon size={17} />
                     {t('projects.github')}
                     <ExternalLink size={14} />
-                  </a>
-                  <a
-                    href={selectedProject.demo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary"
-                  >
-                    <ArrowUpRight size={17} />
-                    {t('projects.demo')}
                   </a>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -16,6 +16,17 @@ import { fadeIn } from './lib/motion';
 
 function App() {
   const [introFinished, setIntroFinished] = useState(false);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setIntroFinished(true);
+      return;
+    }
+    // Safety timeout: ensure page is visible within 1.5s regardless of animation state
+    const timer = setTimeout(() => setIntroFinished(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
